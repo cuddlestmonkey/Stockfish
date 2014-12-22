@@ -87,6 +87,7 @@ void TimeManager::init(const Search::LimitsType& limits, int currentPly, Color u
   */
 
   int hypMTG, hypMyTime, t1, t2;
+  int hypMyTimeNoInc;
 
   // Read uci parameters
   int moveOverhead    = Options["Move Overhead"];
@@ -106,10 +107,16 @@ void TimeManager::init(const Search::LimitsType& limits, int currentPly, Color u
                  + limits.inc[us] * (hypMTG - 1)
                  - moveOverhead * (2 + std::min(hypMTG, 40));
 
+      // Calculate thinking time for hypothetical "moves to go"-value, ignoring increment
+      hypMyTimeNoInc =  limits.time[us]
+                 + 50 * (hypMTG - 1)   //guarantees no regression on fishtest!
+                 - moveOverhead * (2 + std::min(hypMTG, 40));
+
       hypMyTime = std::max(hypMyTime, 0);
+      hypMyTimeNoInc = std::max(hypMyTimeNoInc, 0);
 
       t1 = minThinkingTime + remaining<OptimumTime>(hypMyTime, hypMTG, currentPly, slowMover);
-      t2 = minThinkingTime + remaining<MaxTime>(hypMyTime, hypMTG, currentPly, slowMover);
+      t2 = minThinkingTime + remaining<MaxTime>(hypMyTimeNoInc, hypMTG, currentPly, slowMover);
 
       optimumSearchTime = std::min(optimumSearchTime, t1);
       maximumSearchTime = std::min(maximumSearchTime, t2);
