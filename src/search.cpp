@@ -34,6 +34,7 @@
 #include "tt.h"
 #include "uci.h"
 #include "syzygy/tbprobe.h"
+#include "stats.h"
 
 namespace Search {
 
@@ -315,9 +316,19 @@ namespace {
     // that we will use behind the scenes to retrieve a set of possible moves.
     multiPV = std::max(multiPV, skill.candidates_size());
 
+uint64_t last_nodes_searched = 0;
+int fail_high_delta = 0;
+int fail_low_delta = 0;
+double lognodes[DEPTH_MAX + 1];
+double xiteration[DEPTH_MAX + 1];
+
     // Iterative deepening loop until requested to stop or target depth reached
     while (++depth < DEPTH_MAX && !Signals.stop && (!Limits.depth || depth <= Limits.depth))
     {
+
+fail_high_delta = 0;
+fail_low_delta = 0;
+
         // Age out PV variability metric
         BestMoveChanges *= 0.5;
 
@@ -373,6 +384,7 @@ namespace {
                 // re-search, otherwise exit the loop.
                 if (bestValue <= alpha)
                 {
+                    fail_low_delta++;
                     beta = (alpha + beta) / 2;
                     alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
@@ -381,6 +393,7 @@ namespace {
                 }
                 else if (bestValue >= beta)
                 {
+                    fail_high_delta++;
                     alpha = (alpha + beta) / 2;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
                 }
@@ -403,6 +416,25 @@ namespace {
                      || Time::now() - SearchTime > 3000)
                 sync_cout << uci_pv(pos, depth, alpha, beta) << sync_endl;
         }
+	
+        lognodes[depth - 1] = log((double) (RootPos.nodes_searched() - last_nodes_searched));
+        xiteration[depth - 1] = (double) depth;
+
+        if (depth > 4 * ONE_PLY) {
+            double r = Statistics::correlation_r(xiteration, lognodes, depth);
+
+	    double a, b;
+	    Statistics::linear_fit(xiteration, lognodes, depth, a, b);
+            std::cout << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
+        }
+
+
+std::cout << "@ " << depth << "," << BestMoveChanges 
+          << "," << RootPos.nodes_searched() - last_nodes_searched
+          << "," << fail_low_delta << "," << fail_high_delta
+          << std::endl;
+last_nodes_searched = RootPos.nodes_searched();
+
 
         // If skill levels are enabled and time is up, pick a sub-optimal best move
         if (skill.candidates_size() && skill.time_to_pick(depth))
