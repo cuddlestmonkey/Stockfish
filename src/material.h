@@ -28,7 +28,7 @@
 namespace Material {
 
 /// Material::Entry contains various information about a material configuration.
-/// It contains a material balance evaluation, a function pointer to a special
+/// It contains a material imbalance evaluation, a function pointer to a special
 /// endgame evaluation function (which in most cases is NULL, meaning that the
 /// standard evaluation function will be used), and "scale factors".
 ///
@@ -38,8 +38,7 @@ namespace Material {
 
 struct Entry {
 
-  Score material_value() const { return make_score(value, value); }
-  Score space_weight() const { return spaceWeight; }
+  Score imbalance() const { return make_score(value, value); }
   Phase game_phase() const { return gamePhase; }
   bool specialized_eval_exists() const { return evaluationFunction != NULL; }
   Value evaluate(const Position& pos) const { return (*evaluationFunction)(pos); }
@@ -61,7 +60,6 @@ struct Entry {
   uint8_t factor[COLOR_NB];
   EndgameBase<Value>* evaluationFunction;
   EndgameBase<ScaleFactor>* scalingFunction[COLOR_NB];
-  Score spaceWeight;
   Phase gamePhase;
 };
 
