@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstring>   // For std::memset
 #include <iomanip>
 #include <sstream>
 
@@ -26,7 +27,6 @@
 #include "evaluate.h"
 #include "material.h"
 #include "pawns.h"
-#include "thread.h"
 
 namespace {
 
@@ -91,7 +91,7 @@ namespace {
   // Evaluation weights, indexed by evaluation term
   enum { Mobility, PawnStructure, PassedPawns, Space, KingSafety };
   const struct Weight { int mg, eg; } Weights[] = {
-    {289, 344}, {233, 201}, {221, 273}, {46, 0}, {318, 0}
+    {289, 344}, {233, 201}, {221, 273}, {46, 0}, {321, 0}
   };
 
   #define V(v) Value(v)
@@ -186,19 +186,19 @@ namespace {
   // index to KingDanger[].
   //
   // KingAttackWeights[PieceType] contains king attack weights by piece type
-  const int KingAttackWeights[] = { 0, 0, 2, 2, 3, 5 };
+  const int KingAttackWeights[] = { 0, 0, 6, 2, 5, 5 };
 
   // Bonuses for enemy's safe checks
-  const int QueenContactCheck = 24;
-  const int RookContactCheck  = 16;
-  const int QueenCheck        = 12;
-  const int RookCheck         = 8;
-  const int BishopCheck       = 2;
-  const int KnightCheck       = 3;
+  const int QueenContactCheck = 92;
+  const int RookContactCheck  = 68;
+  const int QueenCheck        = 50;
+  const int RookCheck         = 36;
+  const int BishopCheck       = 7;
+  const int KnightCheck       = 14;
 
   // KingDanger[attackUnits] contains the actual king danger weighted
   // scores, indexed by a calculated integer number.
-  Score KingDanger[128];
+  Score KingDanger[512];
 
   // apply_weight() weighs score 's' by weight 'w' trying to prevent overflow
   Score apply_weight(Score s, const Weight& w) {
@@ -411,11 +411,12 @@ namespace {
         // number and types of the enemy's attacking pieces, the number of
         // attacked and undefended squares around our king and the quality of
         // the pawn shelter (current 'score' value).
-        attackUnits =  std::min(20, (ei.kingAttackersCount[Them] * ei.kingAttackersWeight[Them]) / 2)
-                     + 3 * (ei.kingAdjacentZoneAttacksCount[Them] + popcount<Max15>(undefended))
-                     + 2 * (ei.pinnedPieces[Us] != 0)
-                     - mg_value(score) / 32
-                     - !pos.count<QUEEN>(Them) * 15;
+        attackUnits =  std::min(77, ei.kingAttackersCount[Them] * ei.kingAttackersWeight[Them])
+                     + 10 * ei.kingAdjacentZoneAttacksCount[Them]
+                     + 19 * popcount<Max15>(undefended)
+                     +  9 * (ei.pinnedPieces[Us] != 0)
+                     - mg_value(score) * 63 / 512
+                     - !pos.count<QUEEN>(Them) * 60;
 
         // Analyse the enemy's safe queen contact checks. Firstly, find the
         // undefended squares around the king reachable by the enemy queen...
@@ -475,7 +476,7 @@ namespace {
 
         // Finally, extract the king danger score from the KingDanger[]
         // array and subtract the score from evaluation.
-        score -= KingDanger[std::max(std::min(attackUnits, 99), 0)];
+        score -= KingDanger[std::max(std::min(attackUnits, 399), 0)];
     }
 
     if (Trace)
@@ -533,7 +534,7 @@ namespace {
 
         b = weak & ~ei.attackedBy[Them][ALL_PIECES];
         if (b)
-            score += more_than_one(b) ? Hanging * popcount<Max15>(b) : Hanging;
+            score += Hanging * popcount<Max15>(b);
 
         b = weak & ei.attackedBy[Us][KING];
         if (b)
@@ -676,7 +677,6 @@ namespace {
 
     EvalInfo ei;
     Score score, mobility[2] = { SCORE_ZERO, SCORE_ZERO };
-    Thread* thisThread = pos.this_thread();
 
     // Initialize score by reading the incrementally updated scores included
     // in the position object (material + piece square tables).
@@ -684,7 +684,7 @@ namespace {
     score = pos.psq_score();
 
     // Probe the material hash table
-    ei.mi = Material::probe(pos, thisThread->materialTable, thisThread->endgames);
+    ei.mi = Material::probe(pos);
     score += ei.mi->imbalance();
 
     // If we have a specialized evaluation function for the current material
@@ -693,7 +693,7 @@ namespace {
         return ei.mi->evaluate(pos);
 
     // Probe the pawn hash table
-    ei.pi = Pawns::probe(pos, thisThread->pawnsTable);
+    ei.pi = Pawns::probe(pos);
     score += apply_weight(ei.pi->pawns_score(), Weights[PawnStructure]);
 
     // Initialize attack and king safety bitboards
@@ -891,13 +891,14 @@ namespace Eval {
 
   void init() {
 
-    const double MaxSlope = 30;
+    const double MaxSlope = 7.5;
     const double Peak = 1280;
+    double t = 0.0;
 
-    for (int t = 0, i = 1; i < 100; ++i)
+    for (int i = 1; i < 400; ++i)
     {
-        t = int(std::min(Peak, std::min(0.4 * i * i, t + MaxSlope)));
-        KingDanger[i] = apply_weight(make_score(t, 0), Weights[KingSafety]);
+        t = std::min(Peak, std::min(0.025 * i * i, t + MaxSlope));
+        KingDanger[i] = apply_weight(make_score(int(t), 0), Weights[KingSafety]);
     }
   }
 
