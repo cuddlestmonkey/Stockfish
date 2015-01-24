@@ -377,7 +377,8 @@ fail_low_delta = 0;
 
                 // When failing high/low give some update (without cluttering
                 // the UI) before a re-search.
-                if (  (bestValue <= alpha || bestValue >= beta)
+                if (   multiPV == 1
+                    && (bestValue <= alpha || bestValue >= beta)
                     && Time::now() - SearchTime > 3000)
                     sync_cout << uci_pv(pos, depth, alpha, beta) << sync_endl;
 
