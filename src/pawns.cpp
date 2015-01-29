@@ -62,7 +62,7 @@ namespace {
   const Score UnsupportedPawnPenalty = S(20, 10);
   //
   // Supported passer bonus
-  const Score SupportedPasserBonus = S(60, 0);
+  const Score SupportedPasserBonus = S(30, 0);
 
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
