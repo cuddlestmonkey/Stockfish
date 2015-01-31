@@ -136,11 +136,6 @@ namespace {
     V(0), V(5), V(8), V(8), V(8), V(8), V(5), V(0) }
   };
 
-  const int MidgamePassFactor[] = {
-  // A   B   C   D   E   F   G   H
-    56, 60, 64, 64, 64, 64, 60, 56
-  };
-
   // Threat[defended/weak][minor/major attacking][attacked PieceType] contains
   // bonuses according to which piece type attacks which one.
   const Score Threat[][2][PIECE_TYPE_NB] = {
@@ -622,9 +617,6 @@ namespace {
             else if (pos.pieces(Us) & blockSq)
                 mbonus += rr * 3 + r * 2 + 3, ebonus += rr + r * 2;
         } // rr != 0
-
-        // Adjust midgame passer bonus by file.
-        //mbonus = (mbonus * MidgamePassFactor[file_of(s)]) / 64;
 
         if (pos.count<PAWN>(Us) < pos.count<PAWN>(Them))
             ebonus += ebonus / 4;
