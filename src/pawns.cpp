@@ -174,11 +174,10 @@ namespace {
         // pawn on each file is considered a true passed pawn.
         if (passed && !doubled) {
             e->passedPawns[Us] |= s;
-
-			if (!unsupported) {
-				score += SupportedPasserBonus;
-			}
-		}
+            if (!unsupported) {
+                score += SupportedPasserBonus;
+            }
+        }
 
         // Score this pawn
         if (isolated)
