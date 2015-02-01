@@ -19,6 +19,7 @@
 
 #include <algorithm> // For std::count
 #include <cassert>
+#include <iostream>
 
 #include "movegen.h"
 #include "search.h"
@@ -382,4 +383,8 @@ void ThreadPool::start_thinking(const Position& pos, const LimitsType& limits,
 
   main()->thinking = true;
   main()->notify_one(); // Starts main thread
+}
+  ThreadBase::~ThreadBase() {
+    if (elapsedNanoBusy > 0) 
+    std::cerr << elapsedNanoBusy + elapsedNanoIdle << "ns " << (elapsedNanoIdle * 100) / (elapsedNanoIdle + elapsedNanoBusy) << "% idle thread= " << this << std::endl;
 }

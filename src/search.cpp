@@ -1556,9 +1556,15 @@ Move RootMove::extract_ponder_from_tt(Position& pos)
 }
 
 
+#undef thread_create
+#undef lock_release
+#include <mach/mach.h>
+#include <mach/mach_time.h>
 /// Thread::idle_loop() is where the thread is parked when it has no work to do
 
 void Thread::idle_loop() {
+
+    static mach_timebase_info_data_t sTimebaseInfo;
 
   // Pointer 'this_sp' is not null only if we are called from split(), and not
   // at the thread creation. This means we are the split point's master.
@@ -1568,9 +1574,15 @@ void Thread::idle_loop() {
 
   while (!exit)
   {
+
+      uint64_t start;
+      uint64_t end;
+      uint64_t elapsed;
       // If this thread has been assigned work, launch a search
+      start = mach_absolute_time();
       while (searching)
       {
+
           Threads.mutex.lock();
 
           assert(activeSplitPoint);
@@ -1655,6 +1667,12 @@ void Thread::idle_loop() {
                   }
               }
       }
+      end = mach_absolute_time();
+      elapsed = end-start;
+      if ( sTimebaseInfo.denom == 0 ) {
+        (void) mach_timebase_info(&sTimebaseInfo);
+      }
+      elapsedNanoBusy += (elapsed * sTimebaseInfo.numer / sTimebaseInfo.denom);
 
       // Grab the lock to avoid races with Thread::notify_one()
       mutex.lock();
@@ -1670,7 +1688,13 @@ void Thread::idle_loop() {
       // If we are not searching, wait for a condition to be signaled instead of
       // wasting CPU time polling for work.
       if (!searching && !exit)
+      {
+          start = mach_absolute_time();
           sleepCondition.wait(mutex);
+          end = mach_absolute_time();
+      elapsed = end-start;
+          elapsedNanoIdle += (elapsed * sTimebaseInfo.numer / sTimebaseInfo.denom);
+      }
 
       mutex.unlock();
   }
