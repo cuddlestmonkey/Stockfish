@@ -103,11 +103,10 @@ struct SplitPoint {
 struct ThreadBase {
 
   ThreadBase() : 
-handle(NativeHandle()), 
-exit(false),
-elapsedNanoBusy(0),
-elapsedNanoIdle(0)
- {}
+    handle(NativeHandle()), 
+    exit(false),
+    elapsedIdle(0)
+    {}
   virtual ~ThreadBase();
   virtual void idle_loop() = 0;
   void notify_one();
@@ -117,8 +116,7 @@ elapsedNanoIdle(0)
   ConditionVariable sleepCondition;
   NativeHandle handle;
   volatile bool exit;
-      uint64_t elapsedNanoBusy;
-      uint64_t elapsedNanoIdle;
+  volatile uint64_t elapsedIdle;
 };
 
 
