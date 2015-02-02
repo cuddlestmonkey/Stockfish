@@ -27,6 +27,7 @@
 #include "evaluate.h"
 #include "material.h"
 #include "pawns.h"
+#include "uci.h"
 
 namespace {
 
@@ -93,6 +94,9 @@ namespace {
   const struct Weight { int mg, eg; } Weights[] = {
     {289, 344}, {233, 201}, {221, 273}, {46, 0}, {324, 0}
   };
+
+  int QueenPasserBlockWeight = 0;
+  int RookPasserBlockWeight  = 0;
 
   #define V(v) Value(v)
   #define S(mg, eg) make_score(mg, eg)
@@ -621,9 +625,9 @@ namespace {
                 // Small bonus for tying up opponent's major pieces
                 // in menial blockading duties.
                 if (pos.pieces(QUEEN) & blockSq)
-                    mbonus += rr + rr;
+                    mbonus += (QueenPasserBlockWeight * rr) / 32;
                 else if (pos.pieces(ROOK) & blockSq)
-                    mbonus += rr;
+                    mbonus += (RookPasserBlockWeight * rr) / 32;
             }
 
         } // rr != 0
@@ -910,6 +914,10 @@ namespace Eval {
         t = std::min(Peak, std::min(0.027 * i * i, t + MaxSlope));
         KingDanger[i] = apply_weight(make_score(int(t), 0), Weights[KingSafety]);
     }
+
+    QueenPasserBlockWeight = int(Options["QPBW"]);
+    RookPasserBlockWeight  = int(Options["RPBW"]);
+
   }
 
 } // namespace Eval
