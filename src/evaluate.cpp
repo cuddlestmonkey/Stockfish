@@ -95,8 +95,10 @@ namespace {
     {289, 344}, {233, 201}, {221, 273}, {46, 0}, {324, 0}
   };
 
-  int QueenPasserBlockWeight = 0;
-  int RookPasserBlockWeight  = 0;
+  int QueenPasserBlockWeight  = 0;
+  int RookPasserBlockWeight   = 0;
+  int BishopPasserBlockWeight = 0;
+  int KnightPasserBlockWeight = 0;
 
   #define V(v) Value(v)
   #define S(mg, eg) make_score(mg, eg)
@@ -622,12 +624,16 @@ namespace {
                 mbonus += rr * 3 + r * 2 + 3, ebonus += rr + r * 2;
             else
             {
-                // Small bonus for tying up opponent's major pieces
+                // Small bonus for tying up opponent's pieces
                 // in menial blockading duties.
                 if (pos.pieces(QUEEN) & blockSq)
                     mbonus += (QueenPasserBlockWeight * rr) / 32;
                 else if (pos.pieces(ROOK) & blockSq)
                     mbonus += (RookPasserBlockWeight * rr) / 32;
+                else if (pos.pieces(BISHOP) & blockSq)
+                    mbonus += (BishopPasserBlockWeight * rr) / 32;
+                else if (pos.pieces(KNIGHT) & blockSq)
+                    mbonus += (KnightPasserBlockWeight * rr) / 32;
             }
 
         } // rr != 0
@@ -917,6 +923,8 @@ namespace Eval {
 
     QueenPasserBlockWeight = int(Options["QPBW"]);
     RookPasserBlockWeight  = int(Options["RPBW"]);
+    BishopPasserBlockWeight  = int(Options["BPBW"]);
+    KnightPasserBlockWeight  = int(Options["NPBW"]);
 
   }
 

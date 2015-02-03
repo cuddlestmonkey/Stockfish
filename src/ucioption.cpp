@@ -77,6 +77,8 @@ void init(OptionsMap& o) {
   o["SyzygyProbeLimit"]      << Option(6, 0, 6);
   o["QPBW"]                  << Option(0, -128, 128, on_eval);
   o["RPBW"]                  << Option(0, -128, 128, on_eval);
+  o["BPBW"]                  << Option(0, -128, 128, on_eval);
+  o["NPBW"]                  << Option(0, -128, 128, on_eval);
 }
 
 
