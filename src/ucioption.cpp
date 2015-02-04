@@ -79,6 +79,10 @@ void init(OptionsMap& o) {
   o["RPBW"]                  << Option(0, -128, 128, on_eval);
   o["BPBW"]                  << Option(0, -128, 128, on_eval);
   o["NPBW"]                  << Option(0, -128, 128, on_eval);
+  o["QPBWE"]                  << Option(0, -128, 128, on_eval);
+  o["RPBWE"]                  << Option(0, -128, 128, on_eval);
+  o["BPBWE"]                  << Option(0, -128, 128, on_eval);
+  o["NPBWE"]                  << Option(0, -128, 128, on_eval);
 }
 
 
