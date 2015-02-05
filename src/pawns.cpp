@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "bitboard.h"
 #include "bitcount.h"
@@ -91,6 +92,8 @@ namespace {
   // in front of the king and no enemy pawn on the horizon.
   const Value MaxSafetyBonus = V(258);
 
+  const Score BothWingsBonus = S(20, 30);
+
   #undef S
   #undef V
 
@@ -112,6 +115,14 @@ namespace {
     Bitboard ourPawns   = pos.pieces(Us  , PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
 
+    bool qside = (ourPawns & (FileABB | FileBBB | FileCBB));
+    bool kside = (ourPawns & (FileFBB | FileGBB | FileHBB));
+    if (qside && kside) {
+        e->bothWings[Us] = BothWingsBonus;
+    }
+    else
+        e->bothWings[Us] = make_score(0, 0);
+	
     e->passedPawns[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;
     e->semiopenFiles[Us] = 0xFF;

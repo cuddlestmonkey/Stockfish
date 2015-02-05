@@ -74,7 +74,7 @@ namespace {
   namespace Tracing {
 
     enum Terms { // First 8 entries are for PieceType
-      MATERIAL = 8, IMBALANCE, MOBILITY, THREAT, PASSED, SPACE, TOTAL, TERMS_NB
+      MATERIAL = 8, IMBALANCE, MOBILITY, THREAT, PASSED, SPACE, WINGS, TOTAL, TERMS_NB
     };
 
     Score scores[COLOR_NB][TERMS_NB];
@@ -793,6 +793,19 @@ namespace {
                  sf = ei.pi->pawn_span(strongSide) ? ScaleFactor(56) : ScaleFactor(38);
     }
 
+    if (eg_value(score) > 20)
+    {
+        score += ei.pi->pawns_wings_score(WHITE);
+        if (Trace)
+            Tracing::write(Tracing::WINGS, WHITE, ei.pi->pawns_wings_score(WHITE));
+    }
+    else if (eg_value(score) < -20)
+    {
+        score -= ei.pi->pawns_wings_score(BLACK);
+        if (Trace)
+            Tracing::write(Tracing::WINGS, BLACK, ei.pi->pawns_wings_score(BLACK));
+    }
+
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
     Value v =  mg_value(score) * int(ei.mi->game_phase())
              + eg_value(score) * int(PHASE_MIDGAME - ei.mi->game_phase()) * sf / SCALE_FACTOR_NORMAL;
@@ -868,6 +881,7 @@ namespace {
     print(ss, "Material", MATERIAL);
     print(ss, "Imbalance", IMBALANCE);
     print(ss, "Pawns", PAWN);
+    print(ss, "WingBonus", WINGS);
     print(ss, "Knights", KNIGHT);
     print(ss, "Bishops", BISHOP);
     print(ss, "Rooks", ROOK);
