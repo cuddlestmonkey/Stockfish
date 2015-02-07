@@ -91,8 +91,6 @@ namespace {
   // in front of the king and no enemy pawn on the horizon.
   const Value MaxSafetyBonus = V(258);
 
-  const Score BothWingsBonus = S(20, 30);
-
   #undef S
   #undef V
 
@@ -117,10 +115,10 @@ namespace {
     bool qside = (ourPawns & (FileABB | FileBBB | FileCBB));
     bool kside = (ourPawns & (FileFBB | FileGBB | FileHBB));
     if (qside && kside) {
-        e->bothWings[Us] = BothWingsBonus;
+        e->bothWings[Us] = SCALE_FACTOR_NORMAL;
     }
     else
-        e->bothWings[Us] = make_score(0, 0);
+        e->bothWings[Us] = SCALE_FACTOR_ONESIDE;
 	
     e->passedPawns[Us] = 0;
     e->kingSquares[Us] = SQ_NONE;

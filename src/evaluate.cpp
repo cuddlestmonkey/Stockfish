@@ -74,7 +74,7 @@ namespace {
   namespace Tracing {
 
     enum Terms { // First 8 entries are for PieceType
-      MATERIAL = 8, IMBALANCE, MOBILITY, THREAT, PASSED, SPACE, WINGS, TOTAL, TERMS_NB
+      MATERIAL = 8, IMBALANCE, MOBILITY, THREAT, PASSED, SPACE, TOTAL, TERMS_NB
     };
 
     Score scores[COLOR_NB][TERMS_NB];
@@ -791,19 +791,9 @@ namespace {
                  &&  ei.pi->pawn_span(strongSide) <= 1
                  && !pos.pawn_passed(~strongSide, pos.king_square(~strongSide)))
                  sf = ei.pi->pawn_span(strongSide) ? ScaleFactor(56) : ScaleFactor(38);
-    }
-
-    if (eg_value(score) > 20)
-    {
-        score += ei.pi->pawns_wings_score(WHITE);
-        if (Trace)
-            Tracing::write(Tracing::WINGS, WHITE, ei.pi->pawns_wings_score(WHITE));
-    }
-    else if (eg_value(score) < -20)
-    {
-        score -= ei.pi->pawns_wings_score(BLACK);
-        if (Trace)
-            Tracing::write(Tracing::WINGS, BLACK, ei.pi->pawns_wings_score(BLACK));
+        // It is harder to win when you have pawns only on one side of the board.
+        else
+            sf = std::min(sf, ei.pi->pawns_wings_factor(strongSide));
     }
 
     // Interpolate between a middlegame and a (scaled by 'sf') endgame score
@@ -881,7 +871,6 @@ namespace {
     print(ss, "Material", MATERIAL);
     print(ss, "Imbalance", IMBALANCE);
     print(ss, "Pawns", PAWN);
-    print(ss, "WingBonus", WINGS);
     print(ss, "Knights", KNIGHT);
     print(ss, "Bishops", BISHOP);
     print(ss, "Rooks", ROOK);
