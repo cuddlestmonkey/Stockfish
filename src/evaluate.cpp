@@ -95,14 +95,12 @@ namespace {
     {289, 344}, {233, 201}, {221, 273}, {46, 0}, {322, 0}
   };
 
-  int QueenPasserBlockWeight  = 0;
-  int RookPasserBlockWeight   = 0;
-  int BishopPasserBlockWeight = 0;
-  int KnightPasserBlockWeight = 0;
-  int QueenPasserBlockWeightEg  = 0;
-  int RookPasserBlockWeightEg   = 0;
-  int BishopPasserBlockWeightEg = 0;
-  int KnightPasserBlockWeightEg = 0;
+  int PasserBlockWeightMg[PIECE_TYPE_NB] = {
+    0, 0, 0, 0, 0, 0, 0
+  };
+  int PasserBlockWeightEg[PIECE_TYPE_NB] = {
+    0, 0, 0, 0, 0, 0, 0
+  };
 
   #define V(v) Value(v)
   #define S(mg, eg) make_score(mg, eg)
@@ -651,26 +649,8 @@ namespace {
             {
                 // Small bonus for tying up opponent's pieces
                 // in menial blockading duties.
-                if (pos.pieces(QUEEN) & blockSq)
-                {
-                    mbonus += (QueenPasserBlockWeight * rr) / 32;
-                    ebonus += (QueenPasserBlockWeightEg * rr) / 32;
-                }
-                else if (pos.pieces(ROOK) & blockSq)
-                {
-                    mbonus += (RookPasserBlockWeight * rr) / 32;
-                    ebonus += (RookPasserBlockWeightEg * rr) / 32;
-                }
-                else if (pos.pieces(BISHOP) & blockSq)
-                {
-                    mbonus += (BishopPasserBlockWeight * rr) / 32;
-                    ebonus += (BishopPasserBlockWeightEg * rr) / 32;
-                }
-                else if (pos.pieces(KNIGHT) & blockSq)
-                {
-                    mbonus += (KnightPasserBlockWeight * rr) / 32;
-                    ebonus += (KnightPasserBlockWeightEg * rr) / 32;
-                }
+                mbonus += (PasserBlockWeightMg[type_of(pos.piece_on(blockSq))] * rr) / 32;
+                ebonus += (PasserBlockWeightEg[type_of(pos.piece_on(blockSq))] * rr) / 32;
             }
 
         } // rr != 0
@@ -958,14 +938,14 @@ namespace Eval {
         KingDanger[i] = apply_weight(make_score(int(t), 0), Weights[KingSafety]);
     }
 
-    QueenPasserBlockWeight = int(Options["QPBW"]);
-    RookPasserBlockWeight  = int(Options["RPBW"]);
-    BishopPasserBlockWeight  = int(Options["BPBW"]);
-    KnightPasserBlockWeight  = int(Options["NPBW"]);
-    QueenPasserBlockWeightEg = int(Options["QPBWE"]);
-    RookPasserBlockWeightEg  = int(Options["RPBWE"]);
-    BishopPasserBlockWeightEg  = int(Options["BPBWE"]);
-    KnightPasserBlockWeightEg  = int(Options["NPBWE"]);
+    PasserBlockWeightMg[QUEEN]  = int(Options["QPBW"]);
+    PasserBlockWeightMg[ROOK]   = int(Options["RPBW"]);
+    PasserBlockWeightMg[BISHOP] = int(Options["BPBW"]);
+    PasserBlockWeightMg[KNIGHT] = int(Options["NPBW"]);
+    PasserBlockWeightEg[QUEEN]  = int(Options["QPBWE"]);
+    PasserBlockWeightEg[ROOK]   = int(Options["RPBWE"]);
+    PasserBlockWeightEg[BISHOP] = int(Options["BPBWE"]);
+    PasserBlockWeightEg[KNIGHT] = int(Options["NPBWE"]);
 
   }
 
