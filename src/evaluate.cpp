@@ -95,10 +95,12 @@ namespace {
   };
 
   int PasserBlockWeightMg[PIECE_TYPE_NB] = {
-    0, 0, 0, 0, 0, 0, 0
+    //  P   N   B   R   Q   K
+    0,  0,  0,  0,  0,  0,  0
   };
   int PasserBlockWeightEg[PIECE_TYPE_NB] = {
-    0, 0, 0, 0, 0, 0, 0
+    //  P   N   B   R   Q   K
+    0,  0,  0,  0,  0,  0,  0
   };
 
   #define V(v) Value(v)
