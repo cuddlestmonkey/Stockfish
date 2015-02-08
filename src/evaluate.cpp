@@ -938,10 +938,12 @@ namespace Eval {
         KingDanger[i] = apply_weight(make_score(int(t), 0), Weights[KingSafety]);
     }
 
+    PasserBlockWeightMg[KING]   = int(Options["KPBW"]);
     PasserBlockWeightMg[QUEEN]  = int(Options["QPBW"]);
     PasserBlockWeightMg[ROOK]   = int(Options["RPBW"]);
     PasserBlockWeightMg[BISHOP] = int(Options["BPBW"]);
     PasserBlockWeightMg[KNIGHT] = int(Options["NPBW"]);
+    PasserBlockWeightEg[KING]   = int(Options["KPBWE"]);
     PasserBlockWeightEg[QUEEN]  = int(Options["QPBWE"]);
     PasserBlockWeightEg[ROOK]   = int(Options["RPBWE"]);
     PasserBlockWeightEg[BISHOP] = int(Options["BPBWE"]);
