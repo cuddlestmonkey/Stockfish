@@ -94,13 +94,13 @@ namespace {
     {289, 344}, {233, 201}, {221, 273}, {46, 0}, {322, 0}
   };
 
-  int PasserBlockWeightMg[PIECE_TYPE_NB] = {
+  const int PasserBlockWeightMg[PIECE_TYPE_NB] = {
     //  P   N   B   R   Q   K
-    0,  0,  0,  0,  0,  0,  0
+    0,  0,  7, -6, 42, 62,  4
   };
-  int PasserBlockWeightEg[PIECE_TYPE_NB] = {
+  const int PasserBlockWeightEg[PIECE_TYPE_NB] = {
     //  P   N   B   R   Q   K
-    0,  0,  0,  0,  0,  0,  0
+    0,  0, -3,  3, 17, 41, -3
   };
 
   #define V(v) Value(v)
