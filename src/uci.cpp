@@ -28,6 +28,7 @@
 #include "thread.h"
 #include "tt.h"
 #include "uci.h"
+#include "syzygy/tbprobe.h"
 
 using namespace std;
 
@@ -189,6 +190,13 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "bench")      benchmark(pos, is);
       else if (token == "d")          sync_cout << pos << sync_endl;
       else if (token == "eval")       sync_cout << Eval::trace(pos) << sync_endl;
+      else if (token == "dtz" ) 
+      {
+        int val = 0;
+        int succ = 0;
+        val = Tablebases::probe_dtz(pos, &succ);
+        sync_cout << "suc " << succ << " score " << val << sync_endl;
+      }
       else if (token == "perft")
       {
           int depth;
