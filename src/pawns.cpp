@@ -25,6 +25,7 @@
 #include "pawns.h"
 #include "position.h"
 #include "thread.h"
+#include "uci.h"
 
 namespace {
 
@@ -62,7 +63,7 @@ namespace {
   const Score UnsupportedPawnPenalty = S(20, 10);
 
   // En Passant bonus
-  const Score EnPassantBonus = S(7, 5);
+  Score EnPassantBonus = S(7, 5);
 
   // Center bind bonus: Two pawns controlling the same central square
   const Bitboard CenterBindMask[COLOR_NB] = {
@@ -239,6 +240,9 @@ void init()
               int bonus = Seed[r] + (phalanx ? (Seed[r + 1] - Seed[r]) / 2 : 0);
               Connected[opposed][phalanx][r] = make_score(bonus / 2, bonus >> opposed);
           }
+  int mgep = int(Options["EPBM"]);
+  int egep = int(Options["EPBE"]);
+  EnPassantBonus = make_score(mgep, egep);
 }
 
 
