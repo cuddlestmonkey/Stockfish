@@ -25,6 +25,7 @@
 #include "pawns.h"
 #include "position.h"
 #include "thread.h"
+#include "uci.h"
 
 namespace {
 
@@ -77,7 +78,7 @@ namespace {
 
   const Bitboard WedgeSupportMask = FileBBB | FileCBB | FileDBB | FileEBB | FileFBB | FileGBB;
 
-  const Score WedgeBonus[RANK_NB] = {
+  Score WedgeBonus[RANK_NB] = {
     S( 0, 0), S( 0, 0), S(0, 0), S(0, 0),
     S(20, 0), S(20, 0), S(0, 0), S(0, 0) };
 
@@ -248,6 +249,10 @@ void init()
               int bonus = Seed[r] + (phalanx ? (Seed[r + 1] - Seed[r]) / 2 : 0);
               Connected[opposed][phalanx][r] = make_score(bonus / 2, bonus >> opposed);
           }
+  int w5 = int(Options["Wedge5"]);
+  int w6 = int(Options["Wedge6"]);
+  WedgeBonus[RANK_5] = make_score(w5, 0);
+  WedgeBonus[RANK_6] = make_score(w6, 0);
 }
 
 
