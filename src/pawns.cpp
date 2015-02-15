@@ -69,6 +69,14 @@ namespace {
 
   const Score CenterBind = S(16, 0);
 
+  // Wedge Bonus: Supported, blocked pawn cutting opponent's lines
+  const Bitboard WedgeMask[COLOR_NB] = {
+    ((FileDBB | FileEBB) & (Rank5BB | Rank6BB)) | ((FileCBB | FileFBB) & Rank6BB) ,
+    ((FileDBB | FileEBB) & (Rank4BB | Rank3BB)) | ((FileCBB | FileFBB) & Rank3BB) 
+  };
+
+  const Score WedgeBonus = S(15, 0);
+
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
   { V( 99), V(20), V(26), V(54), V(85), V( 92), V(108) },
@@ -198,6 +206,9 @@ namespace {
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
+
+        if (!unsupported && opposed && (WedgeMask[Us] & s))
+            score += WedgeBonus; 
     }
 
     b = e->semiopenFiles[Us] ^ 0xFF;
