@@ -206,8 +206,7 @@ namespace {
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
-
-        if (!unsupported && opposed && (WedgeMask[Us] & s))
+        else if (!unsupported && opposed && (WedgeMask[Us] & s))
             score += WedgeBonus; 
     }
 
