@@ -75,11 +75,11 @@ namespace {
     ((FileDBB | FileEBB) & (Rank4BB | Rank3BB)) | ((FileCBB | FileFBB) & Rank3BB) 
   };
 
-  const Bitboard WedgeSupportMask = FileCBB | FileDBB | FileEBB | FileFBB;
+  const Bitboard WedgeSupportMask = FileBBB | FileCBB | FileDBB | FileEBB | FileFBB | FileGBB;
 
   const Score WedgeBonus[RANK_NB] = {
     S( 0, 0), S( 0, 0), S(0, 0), S(0, 0),
-    S(15, 0), S(30, 0), S(0, 0), S(0, 0) };
+    S(20, 0), S(20, 0), S(0, 0), S(0, 0) };
 
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
