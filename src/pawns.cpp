@@ -75,7 +75,11 @@ namespace {
     ((FileDBB | FileEBB) & (Rank4BB | Rank3BB)) | ((FileCBB | FileFBB) & Rank3BB) 
   };
 
-  const Score WedgeBonus = S(20, 0);
+  const Bitboard WedgeSupportMask = FileCBB | FileDBB | FileEBB | FileFBB;
+
+  const Score WedgeBonus[RANK_NB] = {
+    S( 0, 0), S( 0, 0), S(0, 0), S(0, 0),
+    S(15, 0), S(30, 0), S(0, 0), S(0, 0) };
 
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
@@ -134,6 +138,11 @@ namespace {
     e->pawnAttacks[Us] = shift_bb<Right>(ourPawns) | shift_bb<Left>(ourPawns);
     e->pawnsOnSquares[Us][BLACK] = popcount<Max15>(ourPawns & DarkSquares);
     e->pawnsOnSquares[Us][WHITE] = pos.count<PAWN>(Us) - e->pawnsOnSquares[Us][BLACK];
+
+    // Wedges: pawns on 5th/6th rank that are supported by a non-flank pawn
+    // this creates a mask of all supported squares in the wedge zone.
+    const Bitboard wedge_support = (shift_bb<Right>(ourPawns & WedgeSupportMask) | shift_bb<Left>(ourPawns & WedgeSupportMask))
+                                    & WedgeMask[Us];
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -206,8 +215,8 @@ namespace {
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
-        else if (!unsupported && opposed && (WedgeMask[Us] & s))
-            score += WedgeBonus; 
+        else if (opposed && (wedge_support & s)) 
+            score += WedgeBonus[relative_rank(Us, s)]; 
     }
 
     b = e->semiopenFiles[Us] ^ 0xFF;
