@@ -221,9 +221,8 @@ namespace {
     // True Wedge
     b = ourPawns & shift_bb<Down>(theirPawns) & e->pawnAttacks[Us] & WedgeMask[Us];
     b &= ~(shift_bb<LeftThem>(theirPawns) | shift_bb<RightThem>(theirPawns));
-    int wc = popcount<Max15>(b);
-    if (wc > 1)
-        score += wc * WedgeBonus;
+    if (popcount<Max15>(b) > 1)
+        score += WedgeBonus;
 
     return score;
   }
