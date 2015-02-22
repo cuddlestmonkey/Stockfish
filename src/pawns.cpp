@@ -69,6 +69,14 @@ namespace {
 
   const Score CenterBind = S(16, 0);
 
+  // True Wedge bonus: More than one pawn protected, blocked and not levered in the wedge zone.
+  const Bitboard WedgeMask[COLOR_NB] = {
+    (FileCBB | FileDBB | FileEBB | FileFBB) & (Rank5BB | Rank6BB),
+    (FileCBB | FileDBB | FileEBB | FileFBB) & (Rank4BB | Rank3BB)
+  };
+
+  const Score WedgeBonus = S(20, 0);
+
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
   { V( 99), V(20), V(26), V(54), V(85), V( 92), V(108) },
@@ -107,8 +115,11 @@ namespace {
 
     const Color  Them  = (Us == WHITE ? BLACK    : WHITE);
     const Square Up    = (Us == WHITE ? DELTA_N  : DELTA_S);
+    const Square Down  = (Us == WHITE ? DELTA_S  : DELTA_N);
     const Square Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
     const Square Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
+    const Square RightThem = (Us == WHITE ? DELTA_SE : DELTA_NW);
+    const Square LeftThem  = (Us == WHITE ? DELTA_SW : DELTA_NE);
 
     Bitboard b, p, doubled, connected;
     Square s;
@@ -206,6 +217,13 @@ namespace {
     // Center binds: Two pawns controlling the same central square
     b = shift_bb<Right>(ourPawns) & shift_bb<Left>(ourPawns) & CenterBindMask[Us];
     score += popcount<Max15>(b) * CenterBind;
+
+    // True Wedge
+    b = ourPawns & shift_bb<Down>(theirPawns) & e->pawnAttacks[Us] & WedgeMask[Us];
+    b &= ~(shift_bb<LeftThem>(theirPawns) | shift_bb<RightThem>(theirPawns));
+    int wc = popcount<Max15>(b);
+    if (wc > 1)
+        score += wc * WedgeBonus;
 
     return score;
   }
