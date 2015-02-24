@@ -281,7 +281,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
   if (pawnsBlockingCenter[Us] && center != FILE_D && center != FILE_E)
       stormFactor = 192;
   if (!pawnsInCenter[Us])
-      weakFactor = 192;
+      weakFactor = 128;  // temporarily disable this
 
   for (File f = center - File(1); f <= center + File(1); ++f)
   {
