@@ -69,6 +69,12 @@ namespace {
 
   const Score CenterBind = S(16, 0);
 
+  // Extended center for detecting 'board divided'
+  const Bitboard CenterColumnMask[COLOR_NB] = {
+    (FileDBB | FileEBB) & (Rank5BB | Rank4BB | Rank3BB),
+    (FileDBB | FileEBB) & (Rank4BB | Rank5BB | Rank6BB)
+  };
+
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
   { V( 99), V(20), V(26), V(54), V(85), V( 92), V(108) },
@@ -107,6 +113,7 @@ namespace {
 
     const Color  Them  = (Us == WHITE ? BLACK    : WHITE);
     const Square Up    = (Us == WHITE ? DELTA_N  : DELTA_S);
+    const Square Down  = (Us == WHITE ? DELTA_S  : DELTA_N);
     const Square Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
     const Square Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
 
@@ -126,7 +133,9 @@ namespace {
     e->pawnAttacks[Us] = shift_bb<Right>(ourPawns) | shift_bb<Left>(ourPawns);
     e->pawnsOnSquares[Us][BLACK] = popcount<Max15>(ourPawns & DarkSquares);
     e->pawnsOnSquares[Us][WHITE] = pos.count<PAWN>(Us) - e->pawnsOnSquares[Us][BLACK];
-    e->pawnsBlockingCentre[Us] = popcount<Max15> ((ourPawns | theirPawns) & CenterBindMask[Them]);
+    e->pawnsInCentre[Us] = popcount<Max15>(ourPawns & CenterColumnMask[Us]);
+    e->pawnsBlockingCentre[Us] = popcount<Max15>(ourPawns & shift_bb<Down>(theirPawns) & CenterColumnMask[Us]);
+
 
     // Loop through all pawns of the current color and score each pawn
     while ((s = *pl++) != SQ_NONE)
@@ -268,9 +277,11 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
   Bitboard theirPawns = b & pos.pieces(Them);
   Value safety = MaxSafetyBonus;
   File center = std::max(FILE_B, std::min(FILE_G, file_of(ksq)));
-  int stormFactor = 128;
-  if ((pawnsBlockingCentre[Us] > 2) && (center != FILE_D && center != FILE_E))
+  int stormFactor = 128, weakFactor = 128;
+  if ((pawnsBlockingCentre[Us] > 1) && (center != FILE_D && center != FILE_E))
       stormFactor = 192;
+  if (pawnsInCentre[Us] == 0)
+      weakFactor = 192;
 
   for (File f = center - File(1); f <= center + File(1); ++f)
   {
@@ -280,7 +291,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
       b  = theirPawns & file_bb(f);
       Rank rkThem = b ? relative_rank(Us, frontmost_sq(Them, b)) : RANK_1;
 
-      safety -=  ShelterWeakness[std::min(f, FILE_H - f)][rkUs]
+      safety -=  (ShelterWeakness[std::min(f, FILE_H - f)][rkUs] * weakFactor / 128)
                + (StormDanger
                  [f == file_of(ksq) && rkThem == relative_rank(Us, ksq) + 1 ? BlockedByKing  :
                   rkUs   == RANK_1                                          ? NoFriendlyPawn :

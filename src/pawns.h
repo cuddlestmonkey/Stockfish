@@ -73,6 +73,7 @@ struct Entry {
   int pawnSpan[COLOR_NB];
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
   int pawnsBlockingCentre[COLOR_NB];
+  int pawnsInCentre[COLOR_NB];
 };
 
 typedef HashTable<Entry, 16384> Table;
