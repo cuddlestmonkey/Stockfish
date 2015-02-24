@@ -72,8 +72,8 @@ struct Entry {
   int semiopenFiles[COLOR_NB];
   int pawnSpan[COLOR_NB];
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
-  int pawnsBlockingCentre[COLOR_NB];
-  int pawnsInCentre[COLOR_NB];
+  bool pawnsBlockingCenter[COLOR_NB];
+  bool pawnsInCenter[COLOR_NB];
 };
 
 typedef HashTable<Entry, 16384> Table;

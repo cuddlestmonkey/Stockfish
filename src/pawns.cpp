@@ -133,8 +133,8 @@ namespace {
     e->pawnAttacks[Us] = shift_bb<Right>(ourPawns) | shift_bb<Left>(ourPawns);
     e->pawnsOnSquares[Us][BLACK] = popcount<Max15>(ourPawns & DarkSquares);
     e->pawnsOnSquares[Us][WHITE] = pos.count<PAWN>(Us) - e->pawnsOnSquares[Us][BLACK];
-    e->pawnsInCentre[Us] = popcount<Max15>(ourPawns & CenterColumnMask[Us]);
-    e->pawnsBlockingCentre[Us] = popcount<Max15>(ourPawns & shift_bb<Down>(theirPawns) & CenterColumnMask[Us]);
+    e->pawnsInCenter[Us] = ourPawns & CenterColumnMask[Us];
+    e->pawnsBlockingCenter[Us] = more_than_one(ourPawns & shift_bb<Down>(theirPawns) & CenterColumnMask[Us]);
 
 
     // Loop through all pawns of the current color and score each pawn
@@ -278,9 +278,9 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
   Value safety = MaxSafetyBonus;
   File center = std::max(FILE_B, std::min(FILE_G, file_of(ksq)));
   int stormFactor = 128, weakFactor = 128;
-  if ((pawnsBlockingCentre[Us] > 1) && (center != FILE_D && center != FILE_E))
+  if (pawnsBlockingCenter[Us] && center != FILE_D && center != FILE_E)
       stormFactor = 192;
-  if (pawnsInCentre[Us] == 0)
+  if (!pawnsInCenter[Us])
       weakFactor = 192;
 
   for (File f = center - File(1); f <= center + File(1); ++f)
