@@ -75,8 +75,8 @@ void init(OptionsMap& o) {
   o["SyzygyProbeDepth"]      << Option(1, 1, 100);
   o["Syzygy50MoveRule"]      << Option(true);
   o["SyzygyProbeLimit"]      << Option(6, 0, 6);
-  o["OCWF"]                  << Option(128, 0, 256, on_pawns);
-  o["CCSF"]                  << Option(128, 0, 256, on_pawns);
+  o["OCSF"]                  << Option(128, 0, 256, on_pawns);
+  o["CCWF"]                  << Option(128, 0, 256, on_pawns);
 }
 
 

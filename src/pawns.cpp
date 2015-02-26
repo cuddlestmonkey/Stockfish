@@ -76,8 +76,8 @@ namespace {
     (FileDBB | FileEBB) & (Rank4BB | Rank5BB | Rank6BB)
   };
 
-  int closedCenterStormFactor = 128;
-  int openCenterWeakFactor    = 128;
+  int closedCenterWeakFactor = 128;
+  int openCenterStormFactor    = 128;
 
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
@@ -244,8 +244,8 @@ void init()
               bonus >>= opposed;
               Connected[opposed][phalanx][r] = make_score( 3 * bonus / 2, bonus);
           }
-  openCenterWeakFactor = int(Options["OCWF"]);
-  closedCenterStormFactor = int(Options["CCSF"]);
+  openCenterStormFactor = int(Options["OCSF"]);
+  closedCenterWeakFactor = int(Options["CCWF"]);
 }
 
 
@@ -285,9 +285,9 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
   File center = std::max(FILE_B, std::min(FILE_G, file_of(ksq)));
   int stormFactor = 128, weakFactor = 128;
   if (pawnsBlockingCenter[Us] && center != FILE_D && center != FILE_E)
-      stormFactor = closedCenterStormFactor;
+      weakFactor = closedCenterWeakFactor;
   if (!pawnsInCenter[Us])
-      weakFactor = openCenterWeakFactor; 
+      stormFactor = openCenterStormFactor; 
 
   for (File f = center - File(1); f <= center + File(1); ++f)
   {
