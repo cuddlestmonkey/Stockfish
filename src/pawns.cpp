@@ -61,6 +61,9 @@ namespace {
   // Unsupported pawn penalty
   const Score UnsupportedPawnPenalty = S(20, 10);
 
+  // Doubled Passed Pawn Penalty
+  const Score DoubledPasserPenalty = S(10, 10);
+
   // Center bind bonus: Two pawns controlling the same central square
   const Bitboard CenterBindMask[COLOR_NB] = {
     (FileDBB | FileEBB) & (Rank5BB | Rank6BB | Rank7BB),
@@ -175,7 +178,13 @@ namespace {
         // full attack info to evaluate passed pawns. Only the frontmost passed
         // pawn on each file is considered a true passed pawn.
         if (passed && !doubled)
+        {
             e->passedPawns[Us] |= s;
+            // If we are passed but the front of a doubled pawn pair, penalise
+            // because it will always be hard to support the pawn from behind.
+            if (ourPawns & forward_bb(Them, s))
+                score -= DoubledPasserPenalty;
+        }
 
         // Score this pawn
         if (isolated)
