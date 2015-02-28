@@ -164,6 +164,8 @@ namespace {
   const Score Hanging            = S(31, 26);
   const Score PawnAttackThreat   = S(20, 20);
   const Score PawnSafePush       = S( 5,  5);
+  const Score DoubledPassPenalty = S(10, 13);
+
 
   // Penalty for a bishop on a1/h1 (a8/h8 for black) which is trapped by
   // a friendly pawn on b2/g2 (b7/g7 for black). This can obviously only
@@ -581,6 +583,7 @@ namespace {
 
     const Color Them = (Us == WHITE ? BLACK : WHITE);
 
+    const Bitboard ourPawns   = pos.pieces(Us  , PAWN);
     Bitboard b, squaresToQueen, defendedSquares, unsafeSquares;
     Score score = SCORE_ZERO;
 
@@ -648,6 +651,10 @@ namespace {
             ebonus += ebonus / 4;
 
         score += make_score(mbonus, ebonus);
+        // If we are passed but the front of a doubled pawn pair, penalise
+        // because it will always be hard to support the pawn from behind.
+        if (ourPawns & forward_bb(Them, s))
+            score -= DoubledPassPenalty;
     }
 
     if (Trace)
