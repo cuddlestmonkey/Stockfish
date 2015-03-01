@@ -72,7 +72,6 @@ struct Entry {
   int semiopenFiles[COLOR_NB];
   int pawnSpan[COLOR_NB];
   int pawnsOnSquares[COLOR_NB][COLOR_NB]; // [color][light/dark squares]
-  bool pawnsBlockingCenter[COLOR_NB];
   bool pawnsInCenter[COLOR_NB];
 };
 
