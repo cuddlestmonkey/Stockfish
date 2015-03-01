@@ -297,10 +297,10 @@ namespace {
     Value bestValue, alpha, beta, delta;
 
     // Node-predictive time management
-    uint64_t last_nodes_searched = 0, n_estimate = 0;
-    double lognodes[DEPTH_MAX + 1], xiteration[DEPTH_MAX + 1];
-    double stdbf = Options["BaselineNodeGrowth"] / 1000.0;
-    double instmul = Options["InstabilityMultiplier"] / 1000.0;
+    uint64_t lastNodeCount = 0;
+    double logNodes[DEPTH_MAX + 1], iterationAsFloat[DEPTH_MAX + 1];
+    double baselineNodeGrowth = Options["BaselineNodeGrowth"] / 1000.0;
+    double instabilityMultiplier = Options["InstabilityMultiplier"] / 1000.0;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -412,31 +412,25 @@ namespace {
                 sync_cout << uci_pv(pos, depth, alpha, beta) << sync_endl;
         }
     
-        lognodes[depth - 1] = log((double) (RootPos.nodes_searched() - last_nodes_searched));
-        xiteration[depth - 1] = (double) depth;
-        double gf = stdbf;
-
+        logNodes[depth - 1] = log((double) (RootPos.nodes_searched() - lastNodeCount));
+        iterationAsFloat[depth - 1] = (double) depth;
+        double estimatedNodeGrowth = baselineNodeGrowth;
 
         if (depth > 4 * ONE_PLY && multiPV == 1) {
-            double r = Statistics::correlation_r(xiteration, lognodes, depth);
-
+            //double r = Statistics::correlation_r(iterationAsFloat, logNodes, depth);
             double a, b;
-            Statistics::linear_fit(xiteration, lognodes, depth, a, b);
-            std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
+            Statistics::linear_fit(iterationAsFloat, logNodes, depth, a, b);
+            //std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
             // compute next N estimate
             double nextn = exp(a + b * (depth + 1.0));
-            gf = (RootPos.nodes_searched() + nextn) / (RootPos.nodes_searched() + 0.0);
-            std::cerr << "@ " << depth 
-                      << "," << RootPos.nodes_searched() - last_nodes_searched
-                      << "," << n_estimate
-                      << "," << gf
-                      << std::endl;
-            n_estimate = (uint64_t) nextn;
+            estimatedNodeGrowth = (RootPos.nodes_searched() + nextn) / (RootPos.nodes_searched() + 0.0);
+            //std::cerr << "@ " << depth 
+            //          << "," << RootPos.nodes_searched() - lastNodeCount
+            //          << "," << estimatedNodeGrowth
+            //          << std::endl;
         }
 
-
-        last_nodes_searched = RootPos.nodes_searched();
-
+        lastNodeCount = RootPos.nodes_searched();
 
         // If skill levels are enabled and time is up, pick a sub-optimal best move
         if (skill.candidates_size() && skill.time_to_pick(depth))
@@ -453,7 +447,7 @@ namespace {
         {
             // Take some extra time if the best move has changed
             if (depth > 4 * ONE_PLY && multiPV == 1)
-                TimeMgr.pv_instability( (gf - stdbf) * instmul );
+                TimeMgr.pv_instability( (estimatedNodeGrowth - baselineNodeGrowth) * instabilityMultiplier );
 
             // Stop the search if only one legal move is available or all
             // of the available time has been used.
