@@ -318,7 +318,6 @@ namespace {
 
 uint64_t last_nodes_searched = 0;
 uint64_t n_estimate = 0;
-int fail_high_delta = 0;
 int fail_low_delta = 0;
 double lognodes[DEPTH_MAX + 1];
 double xiteration[DEPTH_MAX + 1];
@@ -386,7 +385,6 @@ fail_low_delta = 0;
                 // re-search, otherwise exit the loop.
                 if (bestValue <= alpha)
                 {
-                    fail_low_delta++;
                     beta = (alpha + beta) / 2;
                     alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
@@ -395,7 +393,6 @@ fail_low_delta = 0;
                 }
                 else if (bestValue >= beta)
                 {
-                    fail_high_delta++;
                     alpha = (alpha + beta) / 2;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
                 }
@@ -1557,13 +1554,7 @@ Move RootMove::extract_ponder_from_tt(Position& pos)
     return m;
 }
 
-    extern  uint64_t GLOBALstart;
-    extern  uint64_t GLOBALend;
 
-#undef thread_create
-#undef lock_release
-#include <mach/mach.h>
-#include <mach/mach_time.h>
 /// Thread::idle_loop() is where the thread is parked when it has no work to do
 
 void Thread::idle_loop() {
@@ -1576,14 +1567,9 @@ void Thread::idle_loop() {
 
   while (!exit)
   {
-
-      uint64_t start;
-      uint64_t end;
-      uint64_t elapsed;
       // If this thread has been assigned work, launch a search
       while (searching)
       {
-
           Threads.mutex.lock();
 
           assert(activeSplitPoint);
@@ -1707,21 +1693,7 @@ void Thread::idle_loop() {
       // If we are not searching, wait for a condition to be signaled instead of
       // wasting CPU time polling for work.
       if (!searching && !exit)
-      {
-          start = mach_absolute_time();
           sleepCondition.wait(mutex);
-          if ((start < GLOBALstart) || (GLOBALstart == 0) )
-              start = std::max(start, GLOBALstart);
-          end = mach_absolute_time();
-          if ((end > GLOBALend) && (GLOBALend != 0) )
-              end = std::max(start, GLOBALend);
-    
-          elapsed = end-start;
-          if ((elapsedIdle == 0) || exit)
-              ++elapsedIdle;
-          else
-              elapsedIdle += elapsed;
-      }
 
       mutex.unlock();
   }

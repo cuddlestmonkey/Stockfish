@@ -30,13 +30,6 @@
 #include "tt.h"
 #include "uci.h"
 
-#undef thread_create
-#undef lock_release
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-uint64_t GLOBALstart = 0;
-uint64_t GLOBALend = 0;
-
 using namespace std;
 
 namespace {
@@ -127,7 +120,7 @@ void benchmark(const Position& current, istream& is) {
       limits.depth = atoi(limit.c_str());
 
   if (fenFile == "default")
-      fens.assign(Defaults, Defaults + 1);
+      fens.assign(Defaults, Defaults + 37);
 
   else if (fenFile == "current")
       fens.push_back(current.fen());
@@ -154,11 +147,6 @@ void benchmark(const Position& current, istream& is) {
   Search::StateStackPtr st;
   Time::point elapsed = Time::now();
 
-  mach_timebase_info_data_t sTimebaseInfo;
-
-  (void) mach_timebase_info(&sTimebaseInfo);
-  GLOBALstart = mach_absolute_time();
-
   for (size_t i = 0; i < fens.size(); ++i)
   {
       Position pos(fens[i], Options["UCI_Chess960"], Threads.main());
@@ -176,7 +164,6 @@ void benchmark(const Position& current, istream& is) {
       }
   }
 
-  GLOBALend = mach_absolute_time();
   elapsed = std::max(Time::now() - elapsed, Time::point(1)); // Avoid a 'divide by zero'
 
   dbg_print(); // Just before to exit
