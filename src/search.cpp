@@ -295,8 +295,12 @@ namespace {
     Stack stack[MAX_PLY+4], *ss = stack+2; // To allow referencing (ss-2) and (ss+2)
     Depth depth;
     Value bestValue, alpha, beta, delta;
+
+    // Node-predictive time management
     uint64_t last_nodes_searched = 0, n_estimate = 0;
     double lognodes[DEPTH_MAX + 1], xiteration[DEPTH_MAX + 1];
+    double stdbf = Options["BaselineNodeGrowth"] / 1000.0;
+    double instmul = Options["InstabilityMultiplier"] / 1000.0;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -410,6 +414,7 @@ namespace {
     
         lognodes[depth - 1] = log((double) (RootPos.nodes_searched() - last_nodes_searched));
         xiteration[depth - 1] = (double) depth;
+        double gf = stdbf;
 
 
         if (depth > 4 * ONE_PLY && multiPV == 1) {
@@ -420,10 +425,11 @@ namespace {
             std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
             // compute next N estimate
             double nextn = exp(a + b * (depth + 1.0));
-            std::cerr << "@ " << depth << "," << BestMoveChanges 
+            gf = (RootPos.nodes_searched() + nextn) / (RootPos.nodes_searched() + 0.0);
+            std::cerr << "@ " << depth 
                       << "," << RootPos.nodes_searched() - last_nodes_searched
                       << "," << n_estimate
-                      << "," << (RootPos.nodes_searched() + 0.0) / (RootPos.nodes_searched() + nextn)
+                      << "," << gf
                       << std::endl;
             n_estimate = (uint64_t) nextn;
         }
@@ -447,7 +453,7 @@ namespace {
         {
             // Take some extra time if the best move has changed
             if (depth > 4 * ONE_PLY && multiPV == 1)
-                TimeMgr.pv_instability(BestMoveChanges);
+                TimeMgr.pv_instability( (gf - stdbf) * instmul );
 
             // Stop the search if only one legal move is available or all
             // of the available time has been used.
