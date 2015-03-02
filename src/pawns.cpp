@@ -69,6 +69,11 @@ namespace {
 
   const Score CenterBind = S(16, 0);
 
+  // Mobile pawn (one that is hard to deter from advancing and is a passer candidate) by file
+  const Score Mobile[FILE_NB] = {
+    S(5, 0), S(10, 0), S(15, 0), S(15, 0),
+    S(15, 0), S(15, 0), S(10, 0), S(5, 0) };
+
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
   const Value ShelterWeakness[][RANK_NB] = {
   { V( 99), V(20), V(26), V(54), V(85), V( 92), V(108) },
@@ -195,6 +200,9 @@ namespace {
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
+        
+        if (!opposed && !more_than_one(pawn_attack_span(Us, s) & theirPawns))
+            score += Mobile[f];
     }
 
     b = e->semiopenFiles[Us] ^ 0xFF;
