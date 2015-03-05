@@ -284,8 +284,8 @@ namespace {
     // Node-predictive time management
     uint64_t lastNodeCount = 0;
     double logNodes[DEPTH_MAX + 1], iterationAsFloat[DEPTH_MAX + 1];
-    double baselineNodeGrowth = Options["BaselineNodeGrowth"] / 1000.0;
-    double instabilityMultiplier = Options["InstabilityMultiplier"] / 1000.0;
+    const double baselineNodeGrowth = 1.303;
+    const double instabilityMultiplier = 0.785;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
@@ -404,17 +404,11 @@ namespace {
         double estimatedNodeGrowth = baselineNodeGrowth;
 
         if (depth > 4 * ONE_PLY && multiPV == 1) {
-            //double r = Statistics::correlation_r(iterationAsFloat, logNodes, depth);
             double a, b;
             Statistics::linear_fit(iterationAsFloat, logNodes, depth, a, b);
-            //std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
             // compute next N estimate
             double nextn = exp(a + b * (depth + 1.0));
             estimatedNodeGrowth = (RootPos.nodes_searched() + nextn) / (RootPos.nodes_searched() + 0.0);
-            //std::cerr << "@ " << depth 
-            //          << "," << RootPos.nodes_searched() - lastNodeCount
-            //          << "," << estimatedNodeGrowth
-            //          << std::endl;
         }
 
         lastNodeCount = RootPos.nodes_searched();
