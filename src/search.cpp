@@ -432,7 +432,7 @@ namespace {
         {
             // Take some extra time if the best move has changed
             if (depth > 4 * ONE_PLY && multiPV == 1)
-                TimeMgr.pv_instability( std::max(0.0, (estimatedNodeGrowth - baselineNodeGrowth) * instabilityMultiplier) );
+                TimeMgr.pv_instability(BestMoveChanges + std::min(0.0, (estimatedNodeGrowth - baselineNodeGrowth) * instabilityMultiplier) );
 
             // Stop the search if only one legal move is available or all
             // of the available time has been used.
