@@ -409,10 +409,8 @@ namespace {
             Statistics::linear_fit(iterationAsFloat, logNodes, depth, a, b);
             //std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
             // compute next N estimate
-            double nextn = exp(a + b * (depth + 1.0));
-            estimatedNodeGrowth = (RootPos.nodes_searched() + nextn) / (RootPos.nodes_searched() + 0.0);
+            estimatedNodeGrowth = exp(a);
             //std::cerr << "@ " << depth 
-            //          << "," << RootPos.nodes_searched() - lastNodeCount
             //          << "," << estimatedNodeGrowth
             //          << std::endl;
         }
