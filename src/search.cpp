@@ -284,7 +284,7 @@ namespace {
     // Node-predictive time management
     uint64_t lastNodeCount = 0;
     double logNodes[DEPTH_MAX + 1], iterationAsFloat[DEPTH_MAX + 1];
-    double baselineNodeGrowth = Options["BaselineNodeGrowth"] / 1000.0;
+    double baselineNodeGrowth = Options["BaselineNodeGrowth"];
     double instabilityMultiplier = Options["InstabilityMultiplier"] / 1000.0;
 
     std::memset(ss-2, 0, 5 * sizeof(Stack));
