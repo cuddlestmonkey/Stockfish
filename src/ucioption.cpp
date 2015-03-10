@@ -30,6 +30,8 @@
 
 using std::string;
 
+Value  PawnValueMg   = (Value) 198,   PawnValueEg   = (Value) 258;
+
 UCI::OptionsMap Options; // Global object
 
 namespace UCI {
@@ -40,6 +42,10 @@ void on_hash_size(const Option& o) { TT.resize(o); }
 void on_logger(const Option& o) { start_logger(o); }
 void on_threads(const Option&) { Threads.read_uci_options(); }
 void on_tb_path(const Option& o) { Tablebases::init(o); }
+void on_pawn(const Option&) {
+   PawnValueMg = (Value) int(Options["PVM"]);
+   PawnValueEg = (Value) int(Options["PVE"]);
+}
 
 
 /// Our case insensitive less() function as required by UCI protocol
@@ -73,6 +79,8 @@ void init(OptionsMap& o) {
   o["SyzygyProbeDepth"]      << Option(1, 1, 100);
   o["Syzygy50MoveRule"]      << Option(true);
   o["SyzygyProbeLimit"]      << Option(6, 0, 6);
+  o["PVM"]                   << Option(198, 0, 500, on_pawn);
+  o["PVE"]                   << Option(258, 0, 500, on_pawn);
 }
 
 
