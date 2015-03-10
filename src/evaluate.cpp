@@ -642,15 +642,10 @@ namespace {
             }
             else if (pos.pieces(Us) & blockSq)
                 mbonus += rr * 3 + r * 2 + 3, ebonus += rr + r * 2;
-            else
-            {
-                // Small bonus for tying up opponent's major pieces
-                // in menial blockading duties.
-                if (pos.pieces(QUEEN) & blockSq)
-                    mbonus += rr + rr;
-                else if (pos.pieces(ROOK) & blockSq)
-                    mbonus += rr + rr;
-            }
+            // Small bonus for tying up opponent's major pieces
+            // in menial blockading duties.
+            else if (pos.pieces(ROOK, QUEEN) & blockSq)
+                mbonus += rr * 2;
 
         } // rr != 0
 
