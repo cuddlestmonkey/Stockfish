@@ -649,7 +649,7 @@ namespace {
                 if (pos.pieces(QUEEN) & blockSq)
                     mbonus += rr + rr;
                 else if (pos.pieces(ROOK) & blockSq)
-                    mbonus += rr;
+                    mbonus += rr + rr;
             }
 
         } // rr != 0
