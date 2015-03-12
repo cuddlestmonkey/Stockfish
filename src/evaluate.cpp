@@ -640,7 +640,7 @@ namespace {
                 mbonus += rr * 3 + r * 2 + 3, ebonus += rr + r * 2;
             // Small bonus for tying up Rook
             // in menial blockading duties.
-            else if (pos.pieces(ROOK) & blockSq)
+            else if (pos.pieces(QUEEN) & blockSq)
                 mbonus += rr * 2;
 
         } // rr != 0
