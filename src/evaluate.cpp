@@ -638,6 +638,15 @@ namespace {
             }
             else if (pos.pieces(Us) & blockSq)
                 mbonus += rr * 3 + r * 2 + 3, ebonus += rr + r * 2;
+            else if (pos.pieces(QUEEN) & blockSq)
+            {
+                // If there is a rook attacking/defending the pawn from behind,
+                // this impedes the blockers mobility.
+                Bitboard bb = forward_bb(Them, s) & pos.pieces(ROOK) & pos.attacks_from<ROOK>(s);
+
+                if (pos.pieces(Us) & bb)
+                    mbonus += 2 * rr, ebonus += 2 * rr;
+            }
         } // rr != 0
 
         if (pos.count<PAWN>(Us) < pos.count<PAWN>(Them))
