@@ -638,7 +638,7 @@ namespace {
             }
             else if (pos.pieces(Us) & blockSq)
                 mbonus += rr * 3 + r * 2 + 3, ebonus += rr + r * 2;
-            else if (pos.pieces(QUEEN) & blockSq)
+            else
             {
                 // If there is a rook attacking/defending the pawn from behind,
                 // this impedes the blockers mobility.
