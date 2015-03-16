@@ -110,9 +110,12 @@ namespace {
     const Square Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
     const Square Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
 
-    Bitboard b, neighbours, doubled, connected, supported, phalanx;
+    const Bitboard ABEF_Stripe = FileABB | FileBBB | FileEBB | FileFBB;
+    const Bitboard CDGH_Stripe = FileCBB | FileDBB | FileGBB | FileHBB;
+
+    Bitboard b, neighbours, doubled, connected, supported, phalanx, supporters;
     Square s;
-    bool passed, isolated, opposed, backward, lever;
+    bool passed, isolated, opposed, backward, lever, stranded;
     Score score = SCORE_ZERO;
     const Square* pl = pos.list<PAWN>(Us);
     const Bitboard* pawnAttacksBB = StepAttacksBB[make_piece(Us, PAWN)];
@@ -139,6 +142,7 @@ namespace {
 
         // Flag the pawn
         neighbours  =   ourPawns   & adjacent_files_bb(f);
+        supporters  =   ourPawns   & pawn_attack_span(Them, s);
         doubled     =   ourPawns   & forward_bb(Us, s);
         opposed     =   theirPawns & forward_bb(Us, s);
         passed      = !(theirPawns & passed_pawn_mask(Us, s));
@@ -147,14 +151,31 @@ namespace {
         supported   =   neighbours & rank_bb(s - Up);
         connected   =   supported | phalanx;
         isolated    =  !neighbours;
+        stranded    = false;
 
         // Test for backward pawn.
         // If the pawn is passed, isolated, lever or connected it cannot be
         // backward. If there are friendly pawns behind on adjacent files
         // it cannot be backward either.
-        if (   (passed | isolated | lever | connected)
-            || (ourPawns & pawn_attack_span(Them, s)))
+        if (passed | isolated | lever | connected | supporters)
+        {
             backward = false;
+            if (supporters & frontmost_sq(Us, neighbours))
+            {
+                // Not isolated, but we have no friendly pawns ahead of/level with us. 
+                // So we could be "stranded", where our potential supporters are blocked
+                // by enemy pawns. e.g. WP on e5 and f3, BP on f4.
+                
+                // Get all pawns behind and to the sides
+                b = pawn_attack_span(Them, s) & (ourPawns | theirPawns);
+
+                // Now get the frontmost pawn on each side. The 'striped lawn' trick
+                // picks out the two columns individually regardless of original file.
+                b = SquareBB[frontmost_sq(Us, ABEF_Stripe & b)] | frontmost_sq(Us, CDGH_Stripe & b);
+
+                stranded = !(b & ourPawns);
+            }
+        }
         else
         {
             // We now know there are no friendly pawns beside or behind this
@@ -179,6 +200,9 @@ namespace {
 
         // Score this pawn
         if (isolated)
+            score -= Isolated[opposed][f];
+
+        if (stranded)
             score -= Isolated[opposed][f];
 
         if (!supported && !isolated)
