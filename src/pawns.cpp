@@ -160,7 +160,7 @@ namespace {
         if (passed | isolated | lever | connected | supporters)
         {
             backward = false;
-            if (!(neighbours & ~ supporters))
+            if (!isolated && !(neighbours & ~supporters))
             {
                 // Not isolated, but we have no friendly pawns ahead of/level with us. 
                 // So we could be "stranded", where our potential supporters are blocked
@@ -171,13 +171,11 @@ namespace {
 
                 // Now get the frontmost pawn on each side. The 'striped lawn' trick
                 // picks out the two columns individually regardless of original file.
-                Bitboard b1 = ABEF_Stripe & b;
-                Bitboard b2 = CDGH_Stripe & b;
+                const Bitboard b1 = ABEF_Stripe & b;
+                const Bitboard b2 = CDGH_Stripe & b;
 
-                b = b1 ? SquareBB[frontmost_sq(Us, b1)] : 0;
-                b = b2 ? SquareBB[frontmost_sq(Us, b2)] | b : b;
-
-                stranded = !(b & ourPawns);
+                stranded = !(   (b1 && (SquareBB[frontmost_sq(Us, b1)] & ourPawns))
+                             || (b2 && (SquareBB[frontmost_sq(Us, b2)] & ourPawns)));
             }
         }
         else
