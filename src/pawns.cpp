@@ -160,7 +160,7 @@ namespace {
         if (passed | isolated | lever | connected | supporters)
         {
             backward = false;
-            if (!isolated && !(neighbours & ~supporters))
+            if (!(isolated || (neighbours & ~supporters)))
             {
                 // Not isolated, but we have no friendly pawns ahead of/level with us. 
                 // So we could be "stranded", where our potential supporters are blocked
