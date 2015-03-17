@@ -171,7 +171,11 @@ namespace {
 
                 // Now get the frontmost pawn on each side. The 'striped lawn' trick
                 // picks out the two columns individually regardless of original file.
-                b = SquareBB[frontmost_sq(Us, ABEF_Stripe & b)] | frontmost_sq(Us, CDGH_Stripe & b);
+                Bitboard b1 = ABEF_Stripe & b;
+                Bitboard b2 = CDGH_Stripe & b;
+
+                b = b1 ? SquareBB[frontmost_sq(Us, b1)] : 0;
+                b = b2 ? SquareBB[frontmost_sq(Us, b2)] | b : b;
 
                 stranded = !(b & ourPawns);
             }
