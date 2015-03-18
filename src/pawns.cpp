@@ -201,8 +201,10 @@ namespace {
             e->passedPawns[Us] |= s;
 
         // Score this pawn
-        if (isolated | stranded)
+        if (isolated)
             score -= Isolated[opposed][f];
+        else if (stranded)
+            score -= Isolated[opposed][f] / 2;
         else if (!supported)
             score -= UnsupportedPawnPenalty;
 
