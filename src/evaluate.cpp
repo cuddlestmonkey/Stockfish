@@ -171,7 +171,7 @@ namespace {
   const Score Hanging            = S(31, 26);
   const Score PawnAttackThreat   = S(20, 20);
   const Score PawnSafePush       = S( 5,  5);
-  const Score DoubledPassPenalty = S(15, 25);
+  const Score DoubledPassPenalty = S(10,  0);
 
 
   // Penalty for a bishop on a1/h1 (a8/h8 for black) which is trapped by
