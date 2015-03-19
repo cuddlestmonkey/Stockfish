@@ -171,7 +171,11 @@ namespace {
   const Score Hanging            = S(31, 26);
   const Score PawnAttackThreat   = S(20, 20);
   const Score PawnSafePush       = S( 5,  5);
-  const Score DoubledPassPenalty = S(10,  0);
+
+  const Score DoubledPassPenalty[FILE_NB] = {
+    S(10, 8), S(10, 8), S(5, 4), S(0, 0),
+    S(0, 0), S(5, 4), S(10, 8), S(10, 8)
+  };
 
 
   // Penalty for a bishop on a1/h1 (a8/h8 for black) which is trapped by
@@ -650,7 +654,7 @@ namespace {
         // If we are passed but the front of a doubled pawn pair, penalise
         // because it will always be hard to support the pawn from behind.
         if (ourPawns & forward_bb(Them, s))
-            score -= DoubledPassPenalty;
+            score -= DoubledPassPenalty[file_of(s)];
     }
 
     if (Trace)
