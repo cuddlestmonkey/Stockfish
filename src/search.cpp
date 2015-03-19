@@ -90,11 +90,51 @@ namespace {
     Move best = MOVE_NONE;
   };
 
+  struct FastMove {
+    FastMove() { clear(); }
+
+    inline void clear() {
+      expectedPosKey = 0;
+      pv3[0] = pv3[1] = pv3[2] = MOVE_NONE;
+      stableCnt = 0;
+    }
+
+    void update(Position& pos) {
+      // Keep track how many times in a row the PV stays stable 3 ply deep.
+      const std::vector<Move>& RMpv = RootMoves[0].pv;
+      if (RMpv.size() >= 3)
+      {
+          if (pv3[2] == RMpv[2])
+              stableCnt++;
+          else
+              stableCnt = 0, pv3[2] = RMpv[2];
+
+          if (!expectedPosKey || pv3[0] != RMpv[0] || pv3[1] != RMpv[1])
+          {
+              pv3[0] = RMpv[0], pv3[1] = RMpv[1];
+              StateInfo st[2];
+              pos.do_move(RMpv[0], st[0], pos.gives_check(RMpv[0], CheckInfo(pos)));
+              pos.do_move(RMpv[1], st[1], pos.gives_check(RMpv[1], CheckInfo(pos)));
+              expectedPosKey = pos.key();
+              pos.undo_move(RMpv[1]);
+              pos.undo_move(RMpv[0]);
+          }
+      }
+      else
+        clear();
+    }
+
+    Key expectedPosKey;
+    Move pv3[3];
+    int stableCnt;
+  } FM;
+
   size_t PVIdx;
   TimeManager TimeMgr;
   double BestMoveChanges;
   Value DrawValue[COLOR_NB];
   HistoryStats History;
+  CounterMovesHistoryStats CounterMovesHistory;
   GainsStats Gains;
   MovesStats Countermoves, Followupmoves;
 
@@ -238,10 +278,13 @@ void Search::think() {
       }
 
       for (Thread* th : Threads)
+      {
           th->maxPly = 0;
+          th->notify_one(); // Wake up all the threads
+      }
 
       Threads.timer->run = true;
-      Threads.timer->notify_one(); // Wake up the recurring timer
+      Threads.timer->notify_one(); // Start the recurring timer
 
       id_loop(RootPos); // Let's start searching !
 
@@ -280,6 +323,10 @@ namespace {
     Depth depth;
     Value bestValue, alpha, beta, delta;
 
+    // Init fastMove if the previous search generated a candidate and we now got the predicted position.
+    const Move fastMove = (FM.expectedPosKey == pos.key()) ? FM.pv3[2] : MOVE_NONE;
+    FM.clear();
+
     std::memset(ss-2, 0, 5 * sizeof(Stack));
 
     depth = DEPTH_ZERO;
@@ -289,6 +336,7 @@ namespace {
 
     TT.new_search();
     History.clear();
+    CounterMovesHistory.clear();
     Gains.clear();
     Countermoves.clear();
     Followupmoves.clear();
@@ -403,26 +451,42 @@ namespace {
             Signals.stop = true;
 
         // Do we have time for the next iteration? Can we stop searching now?
-        if (Limits.use_time_management() && !Signals.stop && !Signals.stopOnPonderhit)
+        if (Limits.use_time_management())
         {
-            // Take some extra time if the best move has changed
-            if (depth > 4 * ONE_PLY && multiPV == 1)
-                TimeMgr.pv_instability(BestMoveChanges);
-
-            // Stop the search if only one legal move is available or all
-            // of the available time has been used.
-            if (   RootMoves.size() == 1
-                || now() - SearchTime > TimeMgr.available_time())
+            if (!Signals.stop && !Signals.stopOnPonderhit)
             {
-                // If we are allowed to ponder do not stop the search now but
-                // keep pondering until the GUI sends "ponderhit" or "stop".
-                if (Limits.ponder)
-                    Signals.stopOnPonderhit = true;
-                else
-                    Signals.stop = true;
+                // Take some extra time if the best move has changed
+                if (depth > 4 * ONE_PLY && multiPV == 1)
+                    TimeMgr.pv_instability(BestMoveChanges);
+
+                // Stop the search if only one legal move is available or all
+                // of the available time has been used or we matched a fastMove
+                // from the previous search and just did a fast verification.
+                if (   RootMoves.size() == 1
+                    || now() - SearchTime > TimeMgr.available_time()
+                    || (   fastMove == RootMoves[0].pv[0]
+                        && BestMoveChanges < 0.03
+                        && 10 * (now() - SearchTime) > TimeMgr.available_time()))
+                {
+                    // If we are allowed to ponder do not stop the search now but
+                    // keep pondering until the GUI sends "ponderhit" or "stop".
+                    if (Limits.ponder)
+                        Signals.stopOnPonderhit = true;
+                    else
+                        Signals.stop = true;
+                }
             }
+
+            // Update fast move stats.
+            FM.update(pos);
         }
     }
+
+    // Clear any candidate fast move that wasn't completely stable for at least
+    // the 6 final search iterations. (Independent of actual depth and thus TC.)
+    // Time condition prevents consecutive fast moves.
+    if (FM.stableCnt < 6 || now() - SearchTime < TimeMgr.available_time())
+        FM.clear();
 
     // If skill level is enabled, swap best PV line with the sub-optimal one
     if (skill.enabled())
@@ -687,7 +751,7 @@ namespace {
         assert((ss-1)->currentMove != MOVE_NONE);
         assert((ss-1)->currentMove != MOVE_NULL);
 
-        MovePicker mp(pos, ttMove, History, pos.captured_piece_type());
+        MovePicker mp(pos, ttMove, History, CounterMovesHistory, pos.captured_piece_type());
         CheckInfo ci(pos);
 
         while ((move = mp.next_move<false>()) != MOVE_NONE)
@@ -726,7 +790,7 @@ moves_loop: // When in check and at SpNode search starts from here
     Move followupmoves[] = { Followupmoves[pos.piece_on(prevOwnMoveSq)][prevOwnMoveSq].first,
                              Followupmoves[pos.piece_on(prevOwnMoveSq)][prevOwnMoveSq].second };
 
-    MovePicker mp(pos, ttMove, depth, History, countermoves, followupmoves, ss);
+    MovePicker mp(pos, ttMove, depth, History, CounterMovesHistory, countermoves, followupmoves, ss);
     CheckInfo ci(pos);
     value = bestValue; // Workaround a bogus 'uninitialized' warning under gcc
     improving =   ss->staticEval >= (ss-2)->staticEval
@@ -765,7 +829,7 @@ moves_loop: // When in check and at SpNode search starts from here
               continue;
 
           moveCount = ++splitPoint->moveCount;
-          splitPoint->mutex.unlock();
+          splitPoint->spinlock.release();
       }
       else
           ++moveCount;
@@ -834,7 +898,7 @@ moves_loop: // When in check and at SpNode search starts from here
               && moveCount >= FutilityMoveCounts[improving][depth])
           {
               if (SpNode)
-                  splitPoint->mutex.lock();
+                  splitPoint->spinlock.acquire();
 
               continue;
           }
@@ -853,7 +917,7 @@ moves_loop: // When in check and at SpNode search starts from here
 
                   if (SpNode)
                   {
-                      splitPoint->mutex.lock();
+                      splitPoint->spinlock.acquire();
                       if (bestValue > splitPoint->bestValue)
                           splitPoint->bestValue = bestValue;
                   }
@@ -865,7 +929,7 @@ moves_loop: // When in check and at SpNode search starts from here
           if (predictedDepth < 4 * ONE_PLY && pos.see_sign(move) < VALUE_ZERO)
           {
               if (SpNode)
-                  splitPoint->mutex.lock();
+                  splitPoint->spinlock.acquire();
 
               continue;
           }
@@ -965,7 +1029,7 @@ moves_loop: // When in check and at SpNode search starts from here
       // Step 18. Check for new best move
       if (SpNode)
       {
-          splitPoint->mutex.lock();
+          splitPoint->spinlock.acquire();
           bestValue = splitPoint->bestValue;
           alpha = splitPoint->alpha;
       }
@@ -1010,6 +1074,10 @@ moves_loop: // When in check and at SpNode search starts from here
 
           if (value > alpha)
           {
+              // Clear fast move if unstable.
+              if (PvNode && pos.key() == FM.expectedPosKey && (move != FM.pv3[2] || moveCount > 1))
+                  FM.clear();
+
               bestMove = SpNode ? splitPoint->bestMove = move : move;
 
               if (PvNode && !RootNode) // Update pv even in fail-high case
@@ -1192,7 +1260,7 @@ moves_loop: // When in check and at SpNode search starts from here
     // to search the moves. Because the depth is <= 0 here, only captures,
     // queen promotions and checks (only if depth >= DEPTH_QS_CHECKS) will
     // be generated.
-    MovePicker mp(pos, ttMove, depth, History, to_sq((ss-1)->currentMove));
+    MovePicker mp(pos, ttMove, depth, History, CounterMovesHistory, to_sq((ss-1)->currentMove));
     CheckInfo ci(pos);
 
     // Loop through the moves until no moves remain or a beta cutoff occurs
@@ -1331,8 +1399,8 @@ moves_loop: // When in check and at SpNode search starts from here
     *pv = MOVE_NONE;
   }
 
-  // update_stats() updates killers, history, countermoves and followupmoves stats after a fail-high
-  // of a quiet move.
+  // update_stats() updates killers, history, countermoves and followupmoves
+  // stats after a fail-high of a quiet move.
 
   void update_stats(const Position& pos, Stack* ss, Move move, Depth depth, Move* quiets, int quietsCnt) {
 
@@ -1342,27 +1410,32 @@ moves_loop: // When in check and at SpNode search starts from here
         ss->killers[0] = move;
     }
 
-    // Increase history value of the cut-off move and decrease all the other
-    // played quiet moves.
     Value bonus = Value((depth / ONE_PLY) * (depth / ONE_PLY));
-    History.update(pos.moved_piece(move), to_sq(move), bonus);
 
-    for (int i = 0; i < quietsCnt; ++i)
-    {
-        Move m = quiets[i];
-        History.update(pos.moved_piece(m), to_sq(m), -bonus);
-    }
+    Square prevSq = to_sq((ss-1)->currentMove);
+    HistoryStats& cmh = CounterMovesHistory[pos.piece_on(prevSq)][prevSq];
+
+    History.update(pos.moved_piece(move), to_sq(move), bonus);
 
     if (is_ok((ss-1)->currentMove))
     {
-        Square prevMoveSq = to_sq((ss-1)->currentMove);
-        Countermoves.update(pos.piece_on(prevMoveSq), prevMoveSq, move);
+        Countermoves.update(pos.piece_on(prevSq), prevSq, move);
+        cmh.update(pos.moved_piece(move), to_sq(move), bonus);
+    }
+
+    // Decrease all the other played quiet moves
+    for (int i = 0; i < quietsCnt; ++i)
+    {
+        History.update(pos.moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
+
+        if (is_ok((ss-1)->currentMove))
+            cmh.update(pos.moved_piece(quiets[i]), to_sq(quiets[i]), -bonus);
     }
 
     if (is_ok((ss-2)->currentMove) && (ss-1)->currentMove == (ss-1)->ttMove)
     {
-        Square prevOwnMoveSq = to_sq((ss-2)->currentMove);
-        Followupmoves.update(pos.piece_on(prevOwnMoveSq), prevOwnMoveSq, move);
+        Square prevPrevSq = to_sq((ss-2)->currentMove);
+        Followupmoves.update(pos.piece_on(prevPrevSq), prevPrevSq, move);
     }
   }
 
@@ -1521,18 +1594,17 @@ void Thread::idle_loop() {
 
   assert(!this_sp || (this_sp->master == this && searching));
 
-  while (!exit)
+  while (!exit && !(this_sp && this_sp->slavesMask.none()))
   {
       // If this thread has been assigned work, launch a search
       while (searching)
       {
-          Threads.mutex.lock();
+          spinlock.acquire();
 
           assert(activeSplitPoint);
-
           SplitPoint* sp = activeSplitPoint;
 
-          Threads.mutex.unlock();
+          spinlock.release();
 
           Stack stack[MAX_PLY+4], *ss = stack+2; // To allow referencing (ss-2) and (ss+2)
           Position pos(*sp->pos, this);
@@ -1540,7 +1612,7 @@ void Thread::idle_loop() {
           std::memcpy(ss-2, sp->ss-2, 5 * sizeof(Stack));
           ss->splitPoint = sp;
 
-          sp->mutex.lock();
+          sp->spinlock.acquire();
 
           assert(activePosition == nullptr);
 
@@ -1566,19 +1638,10 @@ void Thread::idle_loop() {
           sp->allSlavesSearching = false;
           sp->nodes += pos.nodes_searched();
 
-          // Wake up the master thread so to allow it to return from the idle
-          // loop in case we are the last slave of the split point.
-          if (this != sp->master && sp->slavesMask.none())
-          {
-              assert(!sp->master->searching);
-
-              sp->master->notify_one();
-          }
-
           // After releasing the lock we can't access any SplitPoint related data
           // in a safe way because it could have been released under our feet by
           // the sp master.
-          sp->mutex.unlock();
+          sp->spinlock.release();
 
           // Try to late join to another split point if none of its slaves has
           // already finished.
@@ -1618,37 +1681,38 @@ void Thread::idle_loop() {
               sp = bestSp;
 
               // Recheck the conditions under lock protection
-              Threads.mutex.lock();
-              sp->mutex.lock();
+              sp->spinlock.acquire();
 
               if (   sp->allSlavesSearching
-                  && sp->slavesMask.count() < MAX_SLAVES_PER_SPLITPOINT
-                  && can_join(sp))
+                  && sp->slavesMask.count() < MAX_SLAVES_PER_SPLITPOINT)
               {
-                  sp->slavesMask.set(idx);
-                  activeSplitPoint = sp;
-                  searching = true;
+                  spinlock.acquire();
+
+                  if (can_join(sp))
+                  {
+                      sp->slavesMask.set(idx);
+                      activeSplitPoint = sp;
+                      searching = true;
+                  }
+
+                  spinlock.release();
               }
 
-              sp->mutex.unlock();
-              Threads.mutex.unlock();
+              sp->spinlock.release();
           }
       }
 
-      // Avoid races with notify_one() fired from last slave of the split point
-      std::unique_lock<Mutex> lk(mutex);
-
-      // If we are master and all slaves have finished then exit idle_loop
-      if (this_sp && this_sp->slavesMask.none())
+      // If search is finished then sleep, otherwise just yield
+      if (!Threads.main()->thinking)
       {
-          assert(!searching);
-          break;
-      }
+          assert(!this_sp);
 
-      // If we are not searching, wait for a condition to be signaled instead of
-      // wasting CPU time polling for work.
-      if (!searching && !exit)
-          sleepCondition.wait(lk);
+          std::unique_lock<Mutex> lk(mutex);
+          while (!exit && !Threads.main()->thinking)
+              sleepCondition.wait(lk);
+      }
+      else
+          std::this_thread::yield(); // Wait for a new job or for our slaves to finish
   }
 }
 
@@ -1687,18 +1751,17 @@ void check_time() {
 
   else if (Limits.nodes)
   {
-      Threads.mutex.lock();
-
       int64_t nodes = RootPos.nodes_searched();
 
       // Loop across all split points and sum accumulated SplitPoint nodes plus
       // all the currently active positions nodes.
+      // FIXME: Racy...
       for (Thread* th : Threads)
           for (size_t i = 0; i < th->splitPointsSize; ++i)
           {
               SplitPoint& sp = th->splitPoints[i];
 
-              sp.mutex.lock();
+              sp.spinlock.acquire();
 
               nodes += sp.nodes;
 
@@ -1706,10 +1769,8 @@ void check_time() {
                   if (sp.slavesMask.test(idx) && Threads[idx]->activePosition)
                       nodes += Threads[idx]->activePosition->nodes_searched();
 
-              sp.mutex.unlock();
+              sp.spinlock.release();
           }
-
-      Threads.mutex.unlock();
 
       if (nodes >= Limits.nodes)
           Signals.stop = true;
