@@ -185,7 +185,7 @@ namespace {
             score -= UnsupportedPawnPenalty;
 
         if (doubled)
-            score -= Doubled[f] / distance<Rank>(s, frontmost_sq(Us, doubled));
+            score -= isolated ? Doubled[f] : Doubled[f] / distance<Rank>(s, frontmost_sq(Us, doubled));
 
         if (backward)
             score -= Backward[opposed][f];
