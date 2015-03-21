@@ -36,6 +36,13 @@ namespace {
     S(13, 43), S(20, 48), S(23, 48), S(23, 48),
     S(23, 48), S(23, 48), S(20, 48), S(13, 43) };
 
+  // Scale down doubled pawn penalty by inter pawn distance.
+  // Some values in this array are unreachable, they are just there
+  // to avoid extra offsets elsewhere.
+  // Imagining rear pawn on 2nd rank..
+  //      front pawn on rank:  2  3  4  5  6  7
+  const int DoubledScaler[] = {1, 1, 1, 2, 4, 5}; 
+
   // Isolated pawn penalty by opposed flag and file
   const Score Isolated[2][FILE_NB] = {
   { S(37, 45), S(54, 52), S(60, 52), S(60, 52),
@@ -185,7 +192,7 @@ namespace {
             score -= UnsupportedPawnPenalty;
 
         if (doubled)
-            score -= Doubled[f] / distance<Rank>(s, frontmost_sq(Us, doubled));
+            score -= Doubled[f] / DoubledScaler[distance<Rank>(s, frontmost_sq(Us, doubled))];
 
         if (backward)
             score -= Backward[opposed][f];
