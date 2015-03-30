@@ -565,7 +565,7 @@ namespace {
 
     b2 &=  ~pos.pieces() & (Rank6BB | Rank5BB);
     if (b2)
-        score += popcount<Max15>(b2) * BreakerBonus;
+        score += popcount<Full>(b2) * BreakerBonus;
 
     b &=  ~pos.pieces()
         & ~ei.attackedBy[Them][PAWN]
