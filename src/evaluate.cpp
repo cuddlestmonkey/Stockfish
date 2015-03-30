@@ -173,6 +173,7 @@ namespace {
   const Score Hanging            = S(31, 26);
   const Score PawnAttackThreat   = S(20, 20);
   const Score PawnSafePush       = S( 5,  5);
+  const Score BreakerBonus       = S(10,  0);
 
   // Penalty for a bishop on a1/h1 (a8/h8 for black) which is trapped by
   // a friendly pawn on b2/g2 (b7/g7 for black). This can obviously only
@@ -498,7 +499,7 @@ namespace {
     enum { Defended, Weak };
     enum { Minor, Major };
 
-    Bitboard b, weak, defended, safeThreats;
+    Bitboard b, b2, weak, defended, safeThreats;
     Score score = SCORE_ZERO;
 
     // Non-pawn enemies attacked by a pawn
@@ -560,7 +561,11 @@ namespace {
 
     // Add a small bonus for safe pawn pushes
     b = pos.pieces(Us, PAWN) & ~TRank7BB;
-    b = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces()));
+    b = b2 = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces()));
+
+    b2 &=  ~pos.pieces() & (Rank6BB | Rank5BB);
+    if (b2)
+        score += popcount<Max15>(b2) * BreakerBonus;
 
     b &=  ~pos.pieces()
         & ~ei.attackedBy[Them][PAWN]
