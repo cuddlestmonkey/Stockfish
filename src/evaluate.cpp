@@ -495,6 +495,8 @@ namespace {
     const Square Right      = (Us == WHITE ? DELTA_NE : DELTA_SW);
     const Bitboard TRank2BB = (Us == WHITE ? Rank2BB  : Rank7BB);
     const Bitboard TRank7BB = (Us == WHITE ? Rank7BB  : Rank2BB);
+    const Bitboard TRank5BB = (Us == WHITE ? Rank5BB  : Rank4BB);
+    const Bitboard TRank6BB = (Us == WHITE ? Rank6BB  : Rank3BB);
 
     enum { Defended, Weak };
     enum { Minor, Major };
@@ -563,9 +565,9 @@ namespace {
     b = pos.pieces(Us, PAWN) & ~TRank7BB;
     b = b2 = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces()));
 
-    b2 &=  ~pos.pieces() & (Rank6BB | Rank5BB);
+    b2 &=  ~pos.pieces() & (TRank6BB | TRank5BB);
     if (b2)
-        score += popcount<Full>(b2) * BreakerBonus;
+        score += popcount<Max15>(b2) * BreakerBonus;
 
     b &=  ~pos.pieces()
         & ~ei.attackedBy[Them][PAWN]
