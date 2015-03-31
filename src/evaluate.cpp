@@ -501,7 +501,7 @@ namespace {
     enum { Defended, Weak };
     enum { Minor, Major };
 
-    Bitboard b, weak, defended, safeThreats;
+    Bitboard b, b2, weak, defended, safeThreats;
     Score score = SCORE_ZERO;
 
     // Non-pawn enemies attacked by a pawn
@@ -563,7 +563,11 @@ namespace {
 
     // Add a small bonus for safe pawn pushes
     b = pos.pieces(Us, PAWN) & ~TRank7BB;
-    b = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces()));
+    b = b2 = shift_bb<Up>(b | (shift_bb<Up>(b & TRank2BB) & ~pos.pieces()));
+
+    b2 &=  ~pos.pieces() & (TRank6BB | TRank5BB);
+    if (b2)
+        score += popcount<Max15>(b2) * BreakerBonus;
 
     b &=  ~pos.pieces()
         & ~ei.attackedBy[Them][PAWN]
@@ -571,12 +575,6 @@ namespace {
 
     if (b)
         score += popcount<Full>(b) * PawnSafePush;
-
-    // Extra midgame bonus for mobile pawns on ranks 4&5
-    b &= (TRank5BB | TRank6BB);
-
-    if (b)
-        score += popcount<Max15>(b) * BreakerBonus;
 
     // Add another bonus if the pawn push attacks an enemy piece
     b =  (shift_bb<Left>(b) | shift_bb<Right>(b))
