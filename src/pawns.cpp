@@ -197,8 +197,8 @@ namespace {
             Square s2 = frontmost_sq(Us, doubled);
             int d = distance<Rank>(s, s2);
             score -= Doubled[f] / d;
-            if ((d == 1) && (relative_rank(Us, s2) < RANK_5) && (theirPawns & (s2 + Up)))
-                score -= BlockedDoubledPenalty;
+            if (theirPawns & (s2 + pawn_push(Us)))
+                score -= BlockedDoubledPenalty / d;
         }
 
         if (lever)
