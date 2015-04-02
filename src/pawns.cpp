@@ -32,9 +32,11 @@ namespace {
   #define S(mg, eg) make_score(mg, eg)
 
   // Doubled pawn penalty by file
-  const Score Doubled[FILE_NB] = {
-    S(13, 43), S(20, 48), S(23, 48), S(23, 48),
-    S(23, 48), S(23, 48), S(20, 48), S(13, 43) };
+  const Score Doubled[2][FILE_NB] = {
+  { S(10, 43), S(20, 48), S(23, 48), S(23, 48),
+    S(23, 48), S(23, 48), S(20, 48), S(13, 43) },
+  { S(13, 43), S(20, 48), S(23, 48), S(23, 48),
+    S(23, 48), S(23, 48), S(20, 48), S(13, 43) } };
 
   // Isolated pawn penalty by opposed flag and file
   const Score Isolated[2][FILE_NB] = {
@@ -60,9 +62,6 @@ namespace {
 
   // Unsupported pawn penalty
   const Score UnsupportedPawnPenalty = S(20, 10);
-   
-  // Blocked Doubled pawn penalty
-  const Score BlockedDoubledPenalty  = S(10, 10);
 
   // Center bind bonus: Two pawns controlling the same central square
   const Bitboard CenterBindMask[COLOR_NB] = {
@@ -193,13 +192,8 @@ namespace {
         if (connected)
             score += Connected[opposed][!!phalanx][more_than_one(supported)][relative_rank(Us, s)];
 
-        if (doubled) {
-            Square s2 = frontmost_sq(Us, doubled);
-            int d = distance<Rank>(s, s2);
-            score -= Doubled[f] / d;
-            if (theirPawns & (s2 + pawn_push(Us)))
-                score -= BlockedDoubledPenalty / d;
-        }
+        if (doubled) 
+            score -= Doubled[opposed][f] / distance<Rank>(s, frontmost_sq(Us, doubled));
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
