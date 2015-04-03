@@ -286,7 +286,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
   }
 
   if (pawnBinds[Them] & ((center > FILE_D) ? KSideHotSpot : QSideHotSpot)) {
-      safety -= Value(20);
+      safety -= Value(50);
   }
 
   return safety;
