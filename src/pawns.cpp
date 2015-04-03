@@ -124,6 +124,7 @@ namespace {
     e->kingSquares[Us] = SQ_NONE;
     e->semiopenFiles[Us] = 0xFF;
     e->pawnAttacks[Us] = shift_bb<Right>(ourPawns) | shift_bb<Left>(ourPawns);
+    e->pawnBinds[Us]   = shift_bb<Right>(ourPawns) & shift_bb<Left>(ourPawns);
     e->pawnsOnSquares[Us][BLACK] = popcount<Max15>(ourPawns & DarkSquares);
     e->pawnsOnSquares[Us][WHITE] = pos.count<PAWN>(Us) - e->pawnsOnSquares[Us][BLACK];
 
@@ -201,7 +202,7 @@ namespace {
     e->pawnSpan[Us] = b ? int(msb(b) - lsb(b)) : 0;
 
     // Center binds: Two pawns controlling the same central square
-    b = shift_bb<Right>(ourPawns) & shift_bb<Left>(ourPawns) & CenterBindMask[Us];
+    b = e->pawnBinds[Us] & CenterBindMask[Us];
     score += popcount<Max15>(b) * CenterBind;
 
     return score;
@@ -257,6 +258,8 @@ template<Color Us>
 Value Entry::shelter_storm(const Position& pos, Square ksq) {
 
   const Color Them = (Us == WHITE ? BLACK : WHITE);
+  const Square KSideHotSpot = (Us == WHITE ? SQ_F3 : SQ_F6);
+  const Square QSideHotSpot = (Us == WHITE ? SQ_C3 : SQ_C6);
 
   enum { NoFriendlyPawn, Unblocked, BlockedByPawn, BlockedByKing };
 
@@ -280,6 +283,10 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
                   rkUs   == RANK_1                                          ? NoFriendlyPawn :
                   rkThem == rkUs + 1                                        ? BlockedByPawn  : Unblocked]
                  [std::min(f, FILE_H - f)][rkThem];
+  }
+
+  if (pawnBinds[Them] & ((center > FILE_D) ? KSideHotSpot : QSideHotSpot)) {
+      safety -= Value(20);
   }
 
   return safety;
