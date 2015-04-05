@@ -124,6 +124,13 @@ namespace {
       S( 94, 99), S( 96,100), S(99,111), S(99,112) }
   };
 
+  // Bonus for having a reach into all four sectors of the board
+  const Bitboard QuadrantA1 = (FileABB | FileBBB | FileCBB | FileDBB) & (Rank1BB | Rank2BB | Rank3BB | Rank4BB);
+  const Bitboard QuadrantA8 = (FileABB | FileBBB | FileCBB | FileDBB) & (Rank5BB | Rank6BB | Rank7BB | Rank8BB);
+  const Bitboard QuadrantH1 = (FileEBB | FileFBB | FileGBB | FileHBB) & (Rank1BB | Rank2BB | Rank3BB | Rank4BB);
+  const Bitboard QuadrantH8 = (FileEBB | FileFBB | FileGBB | FileHBB) & (Rank5BB | Rank6BB | Rank7BB | Rank8BB);
+  const Score AccessBonus = S(4, 4);
+
   // Outpost[Bishop/Knight][Square] contains bonuses for knights and bishops
   // outposts, indexed by piece type and square (from white's point of view).
   const Value Outpost[][SQUARE_NB] = {
@@ -306,6 +313,17 @@ namespace {
         int mob = popcount<Pt == QUEEN ? Full : Max15>(b & mobilityArea[Us]);
 
         mobility[Us] += MobilityBonus[Pt][mob];
+
+        // Add bonus for 'access all areas'. This does not care about enemy pawn attacks or our
+        // own pieces.
+        if (b & QuadrantA1)
+            mobility[Us] += AccessBonus; 
+        if (b & QuadrantA8)
+            mobility[Us] += AccessBonus; 
+        if (b & QuadrantH1)
+            mobility[Us] += AccessBonus; 
+        if (b & QuadrantH8)
+            mobility[Us] += AccessBonus; 
 
         if (Pt == BISHOP || Pt == KNIGHT)
         {
