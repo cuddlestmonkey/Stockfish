@@ -258,8 +258,8 @@ template<Color Us>
 Value Entry::shelter_storm(const Position& pos, Square ksq) {
 
   const Color Them = (Us == WHITE ? BLACK : WHITE);
-  const Square KSideHotSpot = (Us == WHITE ? SQ_F3 : SQ_F6);
-  const Square QSideHotSpot = (Us == WHITE ? SQ_C3 : SQ_C6);
+  const Bitboard KSideHotSpot = (Us == WHITE ? SquareBB[SQ_F3] | SquareBB[SQ_F2] : SquareBB[SQ_F6] | SquareBB[SQ_F7]);
+  const Bitboard QSideHotSpot = (Us == WHITE ? SquareBB[SQ_C3] | SquareBB[SQ_C2] : SquareBB[SQ_C6] | SquareBB[SQ_C7]);
 
   enum { NoFriendlyPawn, Unblocked, BlockedByPawn, BlockedByKing };
 
