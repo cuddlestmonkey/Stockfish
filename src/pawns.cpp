@@ -285,7 +285,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
                  [std::min(f, FILE_H - f)][rkThem];
   }
 
-  if (pawnBinds[Them] & ((center > FILE_D) ? KSideHotSpot : QSideHotSpot)) {
+  if (pawnBinds[Them] & ~pawnAttacks[Us] & ((center > FILE_D) ? KSideHotSpot : QSideHotSpot)) {
       safety -= Value(50);
   }
 
