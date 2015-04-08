@@ -99,6 +99,15 @@ namespace {
   // in front of the king and no enemy pawn on the horizon.
   const Value MaxSafetyBonus = V(258);
 
+  const Bitboard KSideHotSpotPawnsUsWhite = SquareBB[SQ_D4] | SquareBB[SQ_E3] | SquareBB[SQ_F2] | SquareBB[SQ_G3];
+  const Bitboard KSideHotSpotPawnsUsBlack = SquareBB[SQ_D5] | SquareBB[SQ_E6] | SquareBB[SQ_F7] | SquareBB[SQ_G6];
+  const Bitboard QSideHotSpotPawnsUsWhite = SquareBB[SQ_E4] | SquareBB[SQ_D3] | SquareBB[SQ_C2] | SquareBB[SQ_B3];
+  const Bitboard QSideHotSpotPawnsUsBlack = SquareBB[SQ_E5] | SquareBB[SQ_D6] | SquareBB[SQ_C7] | SquareBB[SQ_B6];
+  const Bitboard KSideHotSpotPawnsThemWhite = SquareBB[SQ_D5] | SquareBB[SQ_E4] | SquareBB[SQ_G4];
+  const Bitboard KSideHotSpotPawnsThemBlack = SquareBB[SQ_D4] | SquareBB[SQ_E5] | SquareBB[SQ_G5];
+  const Bitboard QSideHotSpotPawnsThemWhite = SquareBB[SQ_E5] | SquareBB[SQ_D4] | SquareBB[SQ_B4];
+  const Bitboard QSideHotSpotPawnsThemBlack = SquareBB[SQ_E4] | SquareBB[SQ_D5] | SquareBB[SQ_B5];
+
   #undef S
   #undef V
 
@@ -258,8 +267,10 @@ template<Color Us>
 Value Entry::shelter_storm(const Position& pos, Square ksq) {
 
   const Color Them = (Us == WHITE ? BLACK : WHITE);
-  const Square KSideHotSpot = (Us == WHITE ? SQ_F3 : SQ_F6);
-  const Square QSideHotSpot = (Us == WHITE ? SQ_C3 : SQ_C6);
+  const Bitboard KSideHotSpotPawnsUs = (Us == WHITE ? KSideHotSpotPawnsUsWhite : KSideHotSpotPawnsUsBlack);
+  const Bitboard QSideHotSpotPawnsUs = (Us == WHITE ? QSideHotSpotPawnsUsWhite : QSideHotSpotPawnsUsBlack);
+  const Bitboard KSideHotSpotPawnsThem = (Us == WHITE ? KSideHotSpotPawnsThemWhite : KSideHotSpotPawnsThemBlack);
+  const Bitboard QSideHotSpotPawnsThem = (Us == WHITE ? QSideHotSpotPawnsThemWhite : QSideHotSpotPawnsThemBlack);
 
   enum { NoFriendlyPawn, Unblocked, BlockedByPawn, BlockedByKing };
 
@@ -285,8 +296,15 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
                  [std::min(f, FILE_H - f)][rkThem];
   }
 
-  if (pawnBinds[Them] & ~pawnAttacks[Us] & ((center > FILE_D) ? KSideHotSpot : QSideHotSpot)) {
-      safety -= Value(50);
+  if (center > FILE_E) {
+      if ((ourPawns & KSideHotSpotPawnsUs) == KSideHotSpotPawnsUs 
+        && (theirPawns & KSideHotSpotPawnsThem) == KSideHotSpotPawnsThem)
+          safety -= Value(60);
+  }
+  else if (center < FILE_D) {
+      if ((ourPawns & QSideHotSpotPawnsUs) == QSideHotSpotPawnsUs
+        && (theirPawns & QSideHotSpotPawnsThem) == QSideHotSpotPawnsThem)
+          safety -= Value(60);
   }
 
   return safety;
