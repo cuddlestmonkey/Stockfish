@@ -599,7 +599,7 @@ namespace {
         ss->currentMove = ttMove; // Can be MOVE_NONE
 
         // If ttMove is quiet, update killers, history, counter move on TT hit
-        if (ttValue >= beta && ttMove && !pos.capture_or_promotion(ttMove) && !inCheck)
+        if (ttValue >= beta && ttMove && !pos.capture_or_promotion(ttMove))
             update_stats(pos, ss, ttMove, depth, nullptr, 0);
 
         return ttValue;
@@ -945,8 +945,6 @@ moves_loop: // When in check and at SpNode search starts from here
       }
 
       ss->currentMove = move;
-      if (!SpNode && !captureOrPromotion && quietCount < 64)
-          quietsSearched[quietCount++] = move;
 
       // Step 14. Make the move
       pos.do_move(move, st, givesCheck);
@@ -1070,6 +1068,7 @@ moves_loop: // When in check and at SpNode search starts from here
               rm.score = -VALUE_INFINITE;
       }
 
+      bool newBestMove = false;
       if (value > bestValue)
       {
           bestValue = SpNode ? splitPoint->bestValue = value : value;
@@ -1082,6 +1081,7 @@ moves_loop: // When in check and at SpNode search starts from here
                   && (move != EasyMove.get(pos.key()) || moveCount > 1))
                   EasyMove.clear();
 
+              newBestMove = true;
               bestMove = SpNode ? splitPoint->bestMove = move : move;
 
               if (PvNode && !RootNode) // Update pv even in fail-high case
@@ -1100,6 +1100,9 @@ moves_loop: // When in check and at SpNode search starts from here
               }
           }
       }
+
+      if (!SpNode && !captureOrPromotion && !newBestMove && quietCount < 64)
+          quietsSearched[quietCount++] = move;
 
       // Step 19. Check for splitting the search
       if (   !SpNode
@@ -1144,8 +1147,8 @@ moves_loop: // When in check and at SpNode search starts from here
                    :     inCheck ? mated_in(ss->ply) : DrawValue[pos.side_to_move()];
 
     // Quiet best move: update killers, history and countermoves
-    else if (bestValue >= beta && !pos.capture_or_promotion(bestMove) && !inCheck)
-        update_stats(pos, ss, bestMove, depth, quietsSearched, quietCount - 1);
+    else if (bestMove != MOVE_NONE && !pos.capture_or_promotion(bestMove))
+        update_stats(pos, ss, bestMove, depth, quietsSearched, quietCount);
 
     tte->save(posKey, value_to_tt(bestValue, ss->ply),
               bestValue >= beta ? BOUND_LOWER :
@@ -1302,8 +1305,7 @@ moves_loop: // When in check and at SpNode search starts from here
       // Detect non-capture evasions that are candidates to be pruned
       evasionPrunable =    InCheck
                        &&  bestValue > VALUE_MATED_IN_MAX_PLY
-                       && !pos.capture(move)
-                       && !pos.can_castle(pos.side_to_move());
+                       && !pos.capture(move);
 
       // Don't search moves with negative SEE values
       if (  (!InCheck || evasionPrunable)
@@ -1403,8 +1405,7 @@ moves_loop: // When in check and at SpNode search starts from here
     *pv = MOVE_NONE;
   }
 
-  // update_stats() updates killers, history and countermoves stats after a fail-high
-  // of a quiet move.
+  // update_stats() updates killers, history, countermove history and countermoves stats for a quiet best move.
 
   void update_stats(const Position& pos, Stack* ss, Move move, Depth depth, Move* quiets, int quietsCnt) {
 
