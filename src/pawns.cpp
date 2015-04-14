@@ -77,7 +77,8 @@ namespace {
   { V( 80), V(12), V(43), V(65), V(88), V( 91), V(115) } };
 
   // Value of a doubled pawn in front of the king by [distance from edge]
-  const Value ExtraPawnStrength[] = { V(0), V(7), V(12), V(10) };
+  Value ExtraPawnStrength[] = { V(0), V(7), V(12), V(10) };
+TUNE(SetRange(0,30), ExtraPawnStrength);
 
   // Danger of enemy pawns moving toward our king by [type][distance from edge][rank]
   const Value StormDanger[][4][RANK_NB] = {
