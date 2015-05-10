@@ -730,12 +730,19 @@ namespace {
 
         if (nullValue >= beta)
         {
+            bool PotentialThreat = false;
+
+            PotentialThreat = (MoveList<KING_MOVES>(pos).size() < 1 || MoveList<LEGAL>(pos).size() < 6);
+
             // Do not return unproven mate scores
             if (nullValue >= VALUE_MATE_IN_MAX_PLY)
                 nullValue = beta;
 
-            if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN)
+            if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN && !PotentialThreat)
                 return nullValue;
+
+            if (PotentialThreat)
+                R = DEPTH_ZERO;
 
             // Do verification search at high depths
             ss->skipEarlyPruning = true;
