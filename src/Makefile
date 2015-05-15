@@ -35,7 +35,7 @@ PGOBENCH = ./$(EXE) bench 16 1 1000 default time
 
 ### Object files
 OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
-	material.o misc.o movegen.o movepick.o pawns.o position.o stats.o \
+	material.o misc.o movegen.o movepick.o pawns.o position.o stats.o psqt.o \
 	search.o thread.o timeman.o tt.o uci.o ucioption.o syzygy/tbprobe.o
 
 ### ==========================================================================
@@ -141,6 +141,7 @@ endif
 ### 3.1 Selecting compiler (default = gcc)
 
 CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -fno-rtti -std=c++11 $(EXTRACXXFLAGS)
+DEPENDFLAGS += -std=c++11
 LDFLAGS += $(EXTRALDFLAGS)
 
 ifeq ($(COMP),)
@@ -151,14 +152,18 @@ ifeq ($(COMP),gcc)
 	comp=gcc
 	CXX=g++
 	CXXFLAGS += -pedantic -Wno-long-long -Wextra -Wshadow
-	LDFLAGS += -Wl,--no-as-needed
+	ifneq ($(UNAME),Darwin)
+	   LDFLAGS += -Wl,--no-as-needed
+	else
+	   LDFLAGS += -Wl
+	endif
 endif
 
 ifeq ($(COMP),mingw)
 	comp=mingw
 	CXX=g++
 	CXXFLAGS += -Wextra -Wshadow
-	LDFLAGS += -static-libstdc++ -static-libgcc
+	LDFLAGS += -static
 endif
 
 ifeq ($(COMP),icc)
@@ -173,6 +178,7 @@ ifeq ($(COMP),clang)
 	CXXFLAGS += -pedantic -Wno-long-long -Wextra -Wshadow
 	ifeq ($(UNAME),Darwin)
 		CXXFLAGS += -std=c++0x -stdlib=libc++
+		DEPENDFLAGS += -std=c++0x -stdlib=libc++
 	endif
 endif
 
@@ -189,8 +195,8 @@ else
 endif
 
 ifeq ($(UNAME),Darwin)
-	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.10
-	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.10
+	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.9
+	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.9
 endif
 
 ### On mingw use Windows threads, otherwise POSIX
@@ -304,12 +310,8 @@ endif
 ifeq ($(comp),gcc)
 	ifeq ($(optimize),yes)
 	ifeq ($(debug),no)
-		GCC_MAJOR := `$(CXX) -dumpversion | cut -f1 -d.`
-		GCC_MINOR := `$(CXX) -dumpversion | cut -f2 -d.`
-		ifeq (1,$(shell expr \( $(GCC_MAJOR) \> 4 \) \| \( $(GCC_MAJOR) \= 4 \& $(GCC_MINOR) \>= 5 \)))
-			CXXFLAGS += -flto
-			LDFLAGS += $(CXXFLAGS)
-		endif
+		CXXFLAGS += -flto
+		LDFLAGS += $(CXXFLAGS)
 	endif
 	endif
 endif

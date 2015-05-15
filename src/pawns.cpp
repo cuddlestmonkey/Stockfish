@@ -45,10 +45,10 @@ namespace {
 
   // Backward pawn penalty by opposed flag and file
   const Score Backward[2][FILE_NB] = {
-  { S(30, 42), S(43, 46), S(49, 46), S(49, 46),
-    S(49, 46), S(49, 46), S(43, 46), S(30, 42) },
-  { S(20, 28), S(29, 31), S(33, 31), S(33, 31),
-    S(33, 31), S(33, 31), S(29, 31), S(20, 28) } };
+  { S(50, 52), S(63, 56), S(69, 56), S(69, 56),
+    S(69, 56), S(69, 56), S(63, 56), S(50, 52) },
+  { S(40, 38), S(49, 41), S(53, 41), S(53, 41),
+    S(53, 41), S(53, 41), S(49, 41), S(40, 38) } };
 
   // Connected pawn bonus by opposed, phalanx, twice supported and rank
   Score Connected[2][2][2][RANK_NB];
@@ -110,9 +110,9 @@ namespace {
     const Square Right = (Us == WHITE ? DELTA_NE : DELTA_SW);
     const Square Left  = (Us == WHITE ? DELTA_NW : DELTA_SE);
 
-    Bitboard b, neighbours, doubled, connected, supported, phalanx;
+    Bitboard b, neighbours, doubled, supported, phalanx;
     Square s;
-    bool passed, isolated, opposed, backward, lever;
+    bool passed, isolated, opposed, backward, lever, connected;
     Score score = SCORE_ZERO;
     const Square* pl = pos.list<PAWN>(Us);
     const Bitboard* pawnAttacksBB = StepAttacksBB[make_piece(Us, PAWN)];
@@ -181,17 +181,17 @@ namespace {
         if (isolated)
             score -= Isolated[opposed][f];
 
-        if (!supported && !isolated)
-            score -= UnsupportedPawnPenalty;
-
-        if (doubled)
-            score -= Doubled[f] / distance<Rank>(s, frontmost_sq(Us, doubled));
-
-        if (backward)
+        else if (backward)
             score -= Backward[opposed][f];
+
+        else if (!supported)
+            score -= UnsupportedPawnPenalty;
 
         if (connected)
             score += Connected[opposed][!!phalanx][more_than_one(supported)][relative_rank(Us, s)];
+
+        if (doubled)
+            score -= Doubled[f] / distance<Rank>(s, frontmost_sq(Us, doubled));
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
@@ -294,14 +294,14 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
 
   kingSquares[Us] = ksq;
   castlingRights[Us] = pos.can_castle(Us);
-  minKingPawnDistance[Us] = 0;
+  int minKingPawnDistance = 0;
 
   Bitboard pawns = pos.pieces(Us, PAWN);
   if (pawns)
-      while (!(DistanceRingBB[ksq][minKingPawnDistance[Us]++] & pawns)) {}
+      while (!(DistanceRingBB[ksq][minKingPawnDistance++] & pawns)) {}
 
   if (relative_rank(Us, ksq) > RANK_4)
-      return make_score(0, -16 * minKingPawnDistance[Us]);
+      return make_score(0, -16 * minKingPawnDistance);
 
   Value bonus = shelter_storm<Us>(pos, ksq);
 
@@ -312,7 +312,7 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
   if (pos.can_castle(MakeCastling<Us, QUEEN_SIDE>::right))
       bonus = std::max(bonus, shelter_storm<Us>(pos, relative_square(Us, SQ_C1)));
 
-  return make_score(bonus, -16 * minKingPawnDistance[Us]);
+  return make_score(bonus, -16 * minKingPawnDistance);
 }
 
 // Explicit template instantiation

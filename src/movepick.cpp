@@ -52,7 +52,7 @@ namespace {
   // pick_best() finds the best move in the range (begin, end) and moves it to
   // the front. It's faster than sorting all the moves in advance when there
   // are few moves e.g. the possible captures.
-  inline Move pick_best(ExtMove* begin, ExtMove* end)
+  Move pick_best(ExtMove* begin, ExtMove* end)
   {
       std::swap(*begin, *std::max_element(begin, end));
       return *begin;
@@ -67,14 +67,13 @@ namespace {
 /// search captures, promotions and some checks) and how important good move
 /// ordering is at the current node.
 
-MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats& h,
-                       Move* cm, Move* fm, Search::Stack* s) : pos(p), history(h), depth(d) {
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats& h, const CounterMovesHistoryStats& cmh,
+                       Move cm, Search::Stack* s) : pos(p), history(h), counterMovesHistory(cmh), depth(d) {
 
   assert(d > DEPTH_ZERO);
 
   endBadCaptures = moves + MAX_MOVES - 1;
-  countermoves = cm;
-  followupmoves = fm;
+  countermove = cm;
   ss = s;
 
   if (pos.checkers())
@@ -87,8 +86,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats&
   endMoves += (ttMove != MOVE_NONE);
 }
 
-MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats& h,
-                       Square s) : pos(p), history(h) {
+MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats& h, const CounterMovesHistoryStats& cmh,
+                       Square s) : pos(p), history(h), counterMovesHistory(cmh) {
 
   assert(d <= DEPTH_ZERO);
 
@@ -112,8 +111,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Depth d, const HistoryStats&
   endMoves += (ttMove != MOVE_NONE);
 }
 
-MovePicker::MovePicker(const Position& p, Move ttm, const HistoryStats& h, PieceType pt)
-                       : pos(p), history(h) {
+MovePicker::MovePicker(const Position& p, Move ttm, const HistoryStats& h, const CounterMovesHistoryStats& cmh, PieceType pt)
+                       : pos(p), history(h), counterMovesHistory(cmh) {
 
   assert(!pos.checkers());
 
@@ -135,10 +134,10 @@ MovePicker::MovePicker(const Position& p, Move ttm, const HistoryStats& h, Piece
 /// highest values will be picked first.
 template<>
 void MovePicker::score<CAPTURES>() {
-  // Winning and equal captures in the main search are ordered by MVV/LVA.
+  // Winning and equal captures in the main search are ordered by MVV.
   // Suprisingly, this appears to perform slightly better than SEE based
   // move ordering. The reason is probably that in a position with a winning
-  // capture, capturing a more valuable (but sufficiently defended) piece
+  // capture, capturing a valuable (but sufficiently defended) piece
   // first usually doesn't hurt. The opponent will have to recapture, and
   // the hanging piece will still be hanging (except in the unusual cases
   // where it is possible to recapture with the hanging piece). Exchanging
@@ -149,21 +148,19 @@ void MovePicker::score<CAPTURES>() {
   // has been picked up in pick_move_from_list(). This way we save some SEE
   // calls in case we get a cutoff.
   for (auto& m : *this)
-      if (type_of(m) == ENPASSANT)
-          m.value = PieceValue[MG][PAWN] - Value(PAWN);
-
-      else if (type_of(m) == PROMOTION)
-          m.value =  PieceValue[MG][pos.piece_on(to_sq(m))] - Value(PAWN)
-                   + PieceValue[MG][promotion_type(m)] - PieceValue[MG][PAWN];
-      else
-          m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
-                   - Value(type_of(pos.moved_piece(m)));
+      m.value =  PieceValue[MG][pos.piece_on(to_sq(m))]
+               - 200 * relative_rank(pos.side_to_move(), to_sq(m));
 }
 
 template<>
 void MovePicker::score<QUIETS>() {
+
+  Square prevSq = to_sq((ss-1)->currentMove);
+  const HistoryStats& cmh = counterMovesHistory[pos.piece_on(prevSq)][prevSq];
+
   for (auto& m : *this)
-      m.value = history[pos.moved_piece(m)][to_sq(m)];
+      m.value =  history[pos.moved_piece(m)][to_sq(m)]
+               + cmh[pos.moved_piece(m)][to_sq(m)] * 3;
 }
 
 template<>
@@ -205,24 +202,12 @@ void MovePicker::generate_next_stage() {
 
       killers[0] = ss->killers[0];
       killers[1] = ss->killers[1];
-      killers[2].move = killers[3].move = MOVE_NONE;
-      killers[4].move = killers[5].move = MOVE_NONE;
+      killers[2].move = MOVE_NONE;
 
-      // In SMP case countermoves[] and followupmoves[] could have duplicated entries
-      // in rare cases (less than 1 out of a million). This is harmless.
-
-      // Be sure countermoves and followupmoves are different from killers
-      for (int i = 0; i < 2; ++i)
-          if (   countermoves[i] != killers[0]
-              && countermoves[i] != killers[1])
-              *endMoves++ = countermoves[i];
-
-      for (int i = 0; i < 2; ++i)
-          if (   followupmoves[i] != killers[0]
-              && followupmoves[i] != killers[1]
-              && followupmoves[i] != killers[2]
-              && followupmoves[i] != killers[3])
-              *endMoves++ = followupmoves[i];
+      // Be sure countermoves are different from killers
+      if (   countermove != killers[0]
+          && countermove != killers[1])
+          *endMoves++ = countermove;
       break;
 
   case QUIETS_1_S1:
@@ -315,10 +300,7 @@ Move MovePicker::next_move<false>() {
           if (   move != ttMove
               && move != killers[0]
               && move != killers[1]
-              && move != killers[2]
-              && move != killers[3]
-              && move != killers[4]
-              && move != killers[5])
+              && move != killers[2])
               return move;
           break;
 

@@ -30,6 +30,13 @@
 class Position;
 struct Thread;
 
+namespace PSQT {
+
+  extern Score psq[COLOR_NB][PIECE_TYPE_NB][SQUARE_NB];
+
+  void init();
+}
+
 /// CheckInfo struct is initialized at c'tor time and keeps info used to detect
 /// if a move gives check.
 
@@ -39,7 +46,7 @@ struct CheckInfo {
 
   Bitboard dcCandidates;
   Bitboard pinned;
-  Bitboard checkSq[PIECE_TYPE_NB];
+  Bitboard checkSquares[PIECE_TYPE_NB];
   Square   ksq;
 };
 
