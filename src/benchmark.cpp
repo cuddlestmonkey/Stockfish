@@ -29,20 +29,12 @@
 #include "tt.h"
 #include "uci.h"
 
-#undef thread_create
-#undef lock_release
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-uint64_t GLOBALstart = 0;
-uint64_t GLOBALend = 0;
-
 using namespace std;
 
 namespace {
 
 const vector<string> Defaults = {
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-#if 0
   "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 10",
   "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 11",
   "4rrk1/pp1n3p/3q2pQ/2p1pb2/2PP4/2P3N1/P2B2PP/4RRK1 b - - 7 19",
@@ -85,7 +77,6 @@ const vector<string> Defaults = {
 
   // 7-man positions
   "8/R7/2q5/8/6k1/8/1P5p/K6R w - - 0 124", // Draw
-#endif
 };
 
 } // namespace
@@ -155,11 +146,6 @@ void benchmark(const Position& current, istream& is) {
   Search::StateStackPtr st;
   TimePoint elapsed = now();
 
-  mach_timebase_info_data_t sTimebaseInfo;
-
-  (void) mach_timebase_info(&sTimebaseInfo);
-  GLOBALstart = mach_absolute_time();
-
   for (size_t i = 0; i < fens.size(); ++i)
   {
       Position pos(fens[i], Options["UCI_Chess960"], Threads.main());
@@ -177,7 +163,6 @@ void benchmark(const Position& current, istream& is) {
       }
   }
 
-  GLOBALend = mach_absolute_time();
   elapsed = now() - elapsed + 1; // Ensure positivity to avoid a 'divide by zero'
 
   dbg_print(); // Just before to exit

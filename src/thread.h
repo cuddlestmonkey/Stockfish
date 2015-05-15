@@ -91,7 +91,7 @@ struct SplitPoint {
 
 struct ThreadBase : public std::thread {
 
-  virtual ~ThreadBase();
+  virtual ~ThreadBase() = default;
   virtual void idle_loop() = 0;
   void notify_one();
   void wait_for(volatile const bool& b);
@@ -100,7 +100,6 @@ struct ThreadBase : public std::thread {
   Spinlock spinlock;
   ConditionVariable sleepCondition;
   volatile bool exit = false;
-  volatile uint64_t elapsedIdle = 0;
 };
 
 

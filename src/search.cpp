@@ -1638,13 +1638,7 @@ bool RootMove::extract_ponder_from_tt(Position& pos)
     return false;
 }
 
-    extern  uint64_t GLOBALstart;
-    extern  uint64_t GLOBALend;
 
-#undef thread_create
-#undef lock_release
-#include <mach/mach.h>
-#include <mach/mach_time.h>
 /// Thread::idle_loop() is where the thread is parked when it has no work to do
 
 void Thread::idle_loop() {
@@ -1657,10 +1651,6 @@ void Thread::idle_loop() {
 
   while (!exit && !(this_sp && this_sp->slavesMask.none()))
   {
-
-      uint64_t start;
-      uint64_t end;
-      uint64_t elapsed;
       // If this thread has been assigned work, launch a search
       while (searching)
       {

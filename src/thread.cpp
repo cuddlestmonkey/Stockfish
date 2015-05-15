@@ -19,7 +19,6 @@
 
 #include <algorithm> // For std::count
 #include <cassert>
-#include <iostream>
 
 #include "movegen.h"
 #include "search.h"
@@ -372,20 +371,4 @@ void ThreadPool::start_thinking(const Position& pos, const LimitsType& limits,
 
   main()->thinking = true;
   main()->notify_one(); // Wake up main thread: 'thinking' must be already set
-}
-
-#undef thread_create
-#undef lock_release
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-extern uint64_t GLOBALend;
-extern uint64_t GLOBALstart;
-ThreadBase::~ThreadBase() {
-    mach_timebase_info_data_t sTimebaseInfo;
-    (void) mach_timebase_info(&sTimebaseInfo);
-     uint64_t totalt = GLOBALend - GLOBALstart;
-    if (totalt > 0) 
-    {
-        std::cerr << totalt << "ns "  << (elapsedIdle * 100) / totalt << "% idle thread= " << this << std::endl;
-    }
 }
