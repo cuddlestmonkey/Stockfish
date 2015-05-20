@@ -135,7 +135,6 @@ namespace {
   Value DrawValue[COLOR_NB];
   HistoryStats History;
   CounterMovesHistoryStats CounterMovesHistory;
-  GainsStats Gains;
   MovesStats Countermoves;
 
   template <NodeType NT, bool SpNode>
@@ -189,7 +188,6 @@ void Search::reset () {
   TT.clear();
   History.clear();
   CounterMovesHistory.clear();
-  Gains.clear();
   Countermoves.clear();
 }
 
@@ -683,7 +681,7 @@ n_estimate = (uint64_t) nextn;
         }
     }
 
-    // Step 5. Evaluate the position statically and update parent's gain statistics
+    // Step 5. Evaluate the position statically
     if (inCheck)
     {
         ss->staticEval = eval = VALUE_NONE;
@@ -711,17 +709,6 @@ n_estimate = (uint64_t) nextn;
 
     if (ss->skipEarlyPruning)
         goto moves_loop;
-
-    if (   !pos.captured_piece_type()
-        &&  ss->staticEval != VALUE_NONE
-        && (ss-1)->staticEval != VALUE_NONE
-        && (move = (ss-1)->currentMove) != MOVE_NULL
-        &&  move != MOVE_NONE
-        &&  type_of(move) == NORMAL)
-    {
-        Square to = to_sq(move);
-        Gains.update(pos.piece_on(to), to, -(ss-1)->staticEval - ss->staticEval);
-    }
 
     // Step 6. Razoring (skipped when in check)
     if (   !PvNode
@@ -955,8 +942,7 @@ moves_loop: // When in check and at SpNode search starts from here
           // Futility pruning: parent node
           if (predictedDepth < 7 * ONE_PLY)
           {
-              futilityValue =  ss->staticEval + futility_margin(predictedDepth)
-                             + 128 + Gains[pos.moved_piece(move)][to_sq(move)];
+              futilityValue =  ss->staticEval + futility_margin(predictedDepth) + 256;
 
               if (futilityValue <= alpha)
               {
