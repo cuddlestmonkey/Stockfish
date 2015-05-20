@@ -453,13 +453,13 @@ namespace {
             else if (PVIdx + 1 == multiPV || Time.elapsed() > 3000)
                 sync_cout << UCI::pv(pos, depth, alpha, beta) << sync_endl;
         }
-	
+    
         lognodes[depth - 1] = log((double) (RootPos.nodes_searched() - last_nodes_searched));
         xiteration[depth - 1] = (double) depth;
 
         if (depth > 4 * ONE_PLY) {
-	        double a, b;
-	        Statistics::linear_fit(xiteration, lognodes, depth, a, b);
+            double a, b;
+            Statistics::linear_fit(xiteration, lognodes, depth, a, b);
         }
 
         last_nodes_searched = RootPos.nodes_searched();
