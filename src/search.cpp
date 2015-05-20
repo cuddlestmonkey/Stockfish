@@ -361,20 +361,13 @@ namespace {
 
     multiPV = std::min(multiPV, RootMoves.size());
 
-uint64_t last_nodes_searched = 0;
-uint64_t n_estimate = 0;
-int fail_high_delta = 0;
-int fail_low_delta = 0;
-double lognodes[DEPTH_MAX + 1];
-double xiteration[DEPTH_MAX + 1];
+    uint64_t last_nodes_searched = 0;
+    double lognodes[DEPTH_MAX + 1];
+    double xiteration[DEPTH_MAX + 1];
 
     // Iterative deepening loop until requested to stop or target depth reached
     while (++depth < DEPTH_MAX && !Signals.stop && (!Limits.depth || depth <= Limits.depth))
     {
-
-fail_high_delta = 0;
-fail_low_delta = 0;
-
         // Age out PV variability metric
         BestMoveChanges *= 0.5;
 
@@ -431,7 +424,6 @@ fail_low_delta = 0;
                 // re-search, otherwise exit the loop.
                 if (bestValue <= alpha)
                 {
-                    fail_low_delta++;
                     beta = (alpha + beta) / 2;
                     alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
@@ -440,7 +432,6 @@ fail_low_delta = 0;
                 }
                 else if (bestValue >= beta)
                 {
-                    fail_high_delta++;
                     alpha = (alpha + beta) / 2;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
                 }
@@ -466,27 +457,12 @@ fail_low_delta = 0;
         lognodes[depth - 1] = log((double) (RootPos.nodes_searched() - last_nodes_searched));
         xiteration[depth - 1] = (double) depth;
 
-	double nextn = 0;
-
         if (depth > 4 * ONE_PLY) {
-            double r = Statistics::correlation_r(xiteration, lognodes, depth);
-
-	    double a, b;
-	    Statistics::linear_fit(xiteration, lognodes, depth, a, b);
-            std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
-	    // compute next N estimate
-	    nextn = exp(a + b * (depth + 1.0));
+	        double a, b;
+	        Statistics::linear_fit(xiteration, lognodes, depth, a, b);
         }
 
-
-std::cerr << "@ " << depth << "," << BestMoveChanges 
-          << "," << RootPos.nodes_searched() - last_nodes_searched
-          << "," << n_estimate
-          << "," << fail_low_delta << "," << fail_high_delta
-          << "," << (RootPos.nodes_searched() + 0.0) / (RootPos.nodes_searched() + nextn)
-          << std::endl;
-last_nodes_searched = RootPos.nodes_searched();
-n_estimate = (uint64_t) nextn;
+        last_nodes_searched = RootPos.nodes_searched();
 
 
         // If skill level is enabled and time is up, pick a sub-optimal best move
