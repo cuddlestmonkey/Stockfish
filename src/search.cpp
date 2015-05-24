@@ -137,6 +137,8 @@ namespace {
   CounterMovesHistoryStats CounterMovesHistory;
   MovesStats Countermoves;
 
+  bool widen_search;
+
   template <NodeType NT, bool SpNode>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
 
@@ -348,6 +350,7 @@ namespace {
     BestMoveChanges = 0;
     bestValue = delta = alpha = -VALUE_INFINITE;
     beta = VALUE_INFINITE;
+    widen_search = false;
 
     TT.new_search();
 
@@ -457,9 +460,14 @@ namespace {
         lognodes[depth - 1] = log((double) (RootPos.nodes_searched() - last_nodes_searched));
         xiteration[depth - 1] = (double) depth;
 
-        if (depth > 4 * ONE_PLY) {
+        if (depth > 8 * ONE_PLY) {
             double a, b;
             Statistics::linear_fit(xiteration, lognodes, depth, a, b);
+
+            if (b < 0.30) {
+                //std::cerr << "B = " << b << "so widen" << std::endl;
+                widen_search = true;
+            }
         }
 
         last_nodes_searched = RootPos.nodes_searched();
