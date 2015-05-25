@@ -976,6 +976,8 @@ moves_loop: // When in check and at SpNode search starts from here
           &&  move != ss->killers[1])
       {
           ss->reduction = reduction<PvNode>(improving, depth, moveCount);
+          if (widen_search)
+              ss->reduction += ONE_PLY;
 
           if (   (!PvNode && cutNode)
               || (   History[pos.piece_on(to_sq(move))][to_sq(move)] < VALUE_ZERO
