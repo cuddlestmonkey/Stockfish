@@ -464,7 +464,7 @@ namespace {
             double a, b;
             Statistics::linear_fit(xiteration, lognodes, depth, a, b);
 
-            if (b > 0.85) {
+            if (b > 0.75) {
                 //std::cerr << "B = " << b << "so widen" << std::endl;
                 focus_search = true;
             }
