@@ -34,6 +34,7 @@
 #include "tt.h"
 #include "uci.h"
 #include "syzygy/tbprobe.h"
+#include "stats.h"
 
 namespace Search {
 
@@ -130,6 +131,8 @@ namespace {
   double BestMoveChanges;
   Value DrawValue[COLOR_NB];
   CounterMovesHistoryStats CounterMovesHistory;
+
+  bool focus_search;
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
@@ -374,6 +377,7 @@ void Thread::search() {
 
   size_t multiPV = Options["MultiPV"];
   Skill skill(Options["Skill Level"]);
+    focus_search = false;
 
   // When playing with strength handicap enable MultiPV search that we will
   // use behind the scenes to retrieve a set of possible moves.
@@ -382,6 +386,9 @@ void Thread::search() {
 
   multiPV = std::min(multiPV, rootMoves.size());
 
+    uint64_t last_nodes_searched = 0;
+    double lognodes[DEPTH_MAX + 1];
+    double xiteration[DEPTH_MAX + 1];
   // Iterative deepening loop until requested to stop or target depth reached
   while (++rootDepth < DEPTH_MAX && !Signals.stop && (!Limits.depth || rootDepth <= Limits.depth))
   {
@@ -481,6 +488,7 @@ void Thread::search() {
 
           else if (PVIdx + 1 == multiPV || Time.elapsed() > 3000)
               sync_cout << UCI::pv(rootPos, rootDepth, alpha, beta) << sync_endl;
+
       }
 
       if (!Signals.stop)
@@ -498,6 +506,28 @@ void Thread::search() {
           && bestValue >= VALUE_MATE_IN_MAX_PLY
           && VALUE_MATE - bestValue <= 2 * Limits.mate)
           Signals.stop = true;
+
+      lognodes[rootDepth - 1] = log((double) (Threads.nodes_searched() - last_nodes_searched));
+      xiteration[rootDepth - 1] = (double) rootDepth;
+
+      if (rootDepth > 8 * ONE_PLY) {
+          {
+              double r = Statistics::correlation_r(xiteration, lognodes, rootDepth);
+
+              double a, b;
+              Statistics::linear_fit(xiteration, lognodes, rootDepth, a, b);
+              std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
+          }
+          double a, b;
+          Statistics::linear_fit(xiteration, lognodes, rootDepth, a, b);
+
+          if (b > 0.75) {
+              //std::cerr << "B = " << b << "so widen" << std::endl;
+              focus_search = true;
+          }
+      }
+
+      last_nodes_searched = Threads.nodes_searched();
 
       // Do we have time for the next iteration? Can we stop searching now?
       if (Limits.use_time_management())
