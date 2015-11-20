@@ -132,8 +132,6 @@ namespace {
   Value DrawValue[COLOR_NB];
   CounterMovesHistoryStats CounterMovesHistory;
 
-  bool focus_search;
-
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
 
@@ -377,7 +375,6 @@ void Thread::search() {
 
   size_t multiPV = Options["MultiPV"];
   Skill skill(Options["Skill Level"]);
-    focus_search = false;
 
   // When playing with strength handicap enable MultiPV search that we will
   // use behind the scenes to retrieve a set of possible moves.
@@ -510,20 +507,12 @@ void Thread::search() {
       xiteration[rootDepth - 1] = (double) rootDepth;
 
       if (rootDepth > 8 * ONE_PLY) {
-          {
-              double r = Statistics::correlation_r(xiteration, lognodes, rootDepth);
+          double r = Statistics::correlation_r(xiteration, lognodes, rootDepth);
 
-              double a, b;
-              Statistics::linear_fit(xiteration, lognodes, rootDepth, a, b);
-              std::cerr << "@ r = " << r << " eqn is logN = " << a << " + d * " << b << std::endl;
-          }
           double a, b;
           Statistics::linear_fit(xiteration, lognodes, rootDepth, a, b);
-
-          if (b > 0.75) {
-              //std::cerr << "B = " << b << "so widen" << std::endl;
-              focus_search = true;
-          }
+          sync_cout << "info branching depth " << rootDepth / ONE_PLY
+                    << " r " << r << " A " << a << " B " << b << " branchfactor " << exp(b) << sync_endl;
       }
 
       last_nodes_searched = Threads.nodes_searched();
