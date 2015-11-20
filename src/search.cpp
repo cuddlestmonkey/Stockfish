@@ -488,7 +488,6 @@ void Thread::search() {
 
           else if (PVIdx + 1 == multiPV || Time.elapsed() > 3000)
               sync_cout << UCI::pv(rootPos, rootDepth, alpha, beta) << sync_endl;
-
       }
 
       if (!Signals.stop)
