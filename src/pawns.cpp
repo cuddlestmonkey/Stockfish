@@ -51,7 +51,7 @@ namespace {
 
   // Levers bonus by rank
   const Score Lever[RANK_NB] = {
-    S( 0, 0), S( 0, 0), S(0, 0), S(0, 0),
+    S( 0, 0), S( 0, 0), S(0, 0), S(10, 5),
     S(20,20), S(40,40), S(0, 0), S(0, 0) };
 
   // Unsupported pawn penalty
