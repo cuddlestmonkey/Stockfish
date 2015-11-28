@@ -49,10 +49,14 @@ namespace {
   // Connected pawn bonus by opposed, phalanx, twice supported and rank
   Score Connected[2][2][2][RANK_NB];
 
-  // Levers bonus by rank
-  const Score Lever[RANK_NB] = {
-    S( 0, 0), S( 0, 0), S(0, 0), S(0, 0),
-    S(20,20), S(40,40), S(0, 0), S(0, 0) };
+  // Levers bonus by  blocked flag and rank
+  Score Lever[2][RANK_NB] = {
+  { S( 0, 0), S( 0, 0), S(0, 0), S(10, 5),
+    S(20,20), S(40,40), S(0, 0), S(0, 0) },
+  { S( 0, 0), S( 0, 0), S(0, 0), S(10, 5),
+    S(20,20), S(40,40), S(0, 0), S(0, 0) } };
+
+  TUNE(Lever);
 
   // Unsupported pawn penalty
   const Score UnsupportedPawnPenalty = S(20, 10);
@@ -108,7 +112,7 @@ namespace {
 
     Bitboard b, neighbours, doubled, supported, phalanx;
     Square s;
-    bool passed, isolated, opposed, backward, lever, connected;
+    bool passed, isolated, opposed, backward, lever, connected, blocked;
     Score score = SCORE_ZERO;
     const Square* pl = pos.squares<PAWN>(Us);
     const Bitboard* pawnAttacksBB = StepAttacksBB[make_piece(Us, PAWN)];
@@ -141,6 +145,7 @@ namespace {
         opposed     =   theirPawns & forward_bb(Us, s);
         passed      = !(theirPawns & passed_pawn_mask(Us, s));
         lever       =   theirPawns & pawnAttacksBB[s];
+        blocked     =   theirPawns & (s + pawn_push(Us));
         phalanx     =   neighbours & rank_bb(s);
         supported   =   neighbours & rank_bb(s - Up);
         connected   =   supported | phalanx;
@@ -193,7 +198,7 @@ namespace {
             score -= Doubled[f] / distance<Rank>(s, frontmost_sq(Us, doubled));
 
         if (lever)
-            score += Lever[relative_rank(Us, s)];
+            score += Lever[blocked][relative_rank(Us, s)];
     }
 
     b = e->semiopenFiles[Us] ^ 0xFF;
