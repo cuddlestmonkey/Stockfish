@@ -32,19 +32,135 @@ namespace {
   #define S(mg, eg) make_score(mg, eg)
 
   // Isolated pawn penalty by opposed flag
-  const Score Isolated[2] = { S(45, 40), S(30, 27) };
+  const Score Isolated[VARIANT_NB][2] = {
+    { S(45, 40), S(30, 27) },
+#ifdef ANTI
+    { S(50, 80), S(54, 69) },
+#endif
+#ifdef ATOMIC
+    { S(25, 27), S(27, 18) },
+#endif
+#ifdef CRAZYHOUSE
+    { S(45, 40), S(30, 27) },
+#endif
+#ifdef HORDE
+    { S(60, 44), S(18, 38) },
+#endif
+#ifdef KOTH
+    { S(45, 40), S(30, 27) },
+#endif
+#ifdef LOSERS
+    { S(50, 80), S(54, 69) },
+#endif
+#ifdef RACE
+    {},
+#endif
+#ifdef RELAY
+    { S(45, 40), S(30, 27) },
+#endif
+#ifdef THREECHECK
+    { S(45, 40), S(30, 27) },
+#endif
+  };
 
   // Backward pawn penalty by opposed flag
-  const Score Backward[2] = { S(56, 33), S(41, 19) };
+  const Score Backward[VARIANT_NB][2] = {
+    { S(56, 33), S(41, 19) },
+#ifdef ANTI
+    { S(64, 25), S(26, 50) },
+#endif
+#ifdef ATOMIC
+    { S(41, 25), S(41, 13) },
+#endif
+#ifdef CRAZYHOUSE
+    { S(56, 33), S(41, 19) },
+#endif
+#ifdef HORDE
+    { S(48, 26), S(80, 15) },
+#endif
+#ifdef KOTH
+    { S(56, 33), S(41, 19) },
+#endif
+#ifdef LOSERS
+    { S(64, 25), S(26, 50) },
+#endif
+#ifdef RACE
+    {},
+#endif
+#ifdef RELAY
+    { S(56, 33), S(41, 19) },
+#endif
+#ifdef THREECHECK
+    { S(56, 33), S(41, 19) },
+#endif
+  };
 
   // Unsupported pawn penalty for pawns which are neither isolated or backward
-  const Score Unsupported = S(17, 8);
+  const Score Unsupported[VARIANT_NB] = {
+    S( 17,   8),
+#ifdef ANTI
+    S(-45, -48),
+#endif
+#ifdef ATOMIC
+    S( 45,   0),
+#endif
+#ifdef CRAZYHOUSE
+    S( 17,   8),
+#endif
+#ifdef HORDE
+    S( 47,  50),
+#endif
+#ifdef KOTH
+    S( 17,   8),
+#endif
+#ifdef LOSERS
+    S(-45, -48),
+#endif
+#ifdef RACE
+    S(  0,   0),
+#endif
+#ifdef RELAY
+    S( 17,   8),
+#endif
+#ifdef THREECHECK
+    S( 17,   8),
+#endif
+  };
 
   // Connected pawn bonus by opposed, phalanx, twice supported and rank
   Score Connected[2][2][2][RANK_NB];
 
   // Doubled pawn penalty
-  const Score Doubled = S(18,38);
+  const Score Doubled[VARIANT_NB] = {
+    S(18, 38),
+#ifdef ANTI
+    S( 4, 51),
+#endif
+#ifdef ATOMIC
+    S( 5, 42),
+#endif
+#ifdef CRAZYHOUSE
+    S(18, 38),
+#endif
+#ifdef HORDE
+    S(-26, 78),
+#endif
+#ifdef KOTH
+    S(18, 38),
+#endif
+#ifdef LOSERS
+    S( 4, 51),
+#endif
+#ifdef RACE
+    S( 0,  0),
+#endif
+#ifdef RELAY
+    S(18, 38),
+#endif
+#ifdef THREECHECK
+    S(18, 38),
+#endif
+  };
 
   // Lever bonus by rank
   const Score Lever[RANK_NB] = {
@@ -53,11 +169,80 @@ namespace {
   };
 
   // Weakness of our pawn shelter in front of the king by [distance from edge][rank]
-  const Value ShelterWeakness[][RANK_NB] = {
+  const Value ShelterWeakness[VARIANT_NB][4][RANK_NB] = {
+  {
     { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
     { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
     { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
     { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#ifdef ANTI
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
+#ifdef ATOMIC
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
+#ifdef CRAZYHOUSE
+  {
+    { V(238), V( 6), V( 82), V(130), V(120), V(166), V(232) },
+    { V(330), V( 0), V(120), V(184), V(186), V(184), V(192) },
+    { V(196), V( 0), V(156), V(136), V(216), V(196), V(242) },
+    { V(176), V(34), V(112), V(170), V(182), V(194), V(276) }
+  },
+#endif
+#ifdef HORDE
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
+#ifdef KOTH
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
+#ifdef LOSERS
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
+#ifdef RACE
+  {},
+#endif
+#ifdef RELAY
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
+#ifdef THREECHECK
+  {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
+  },
+#endif
   };
 
   // Danger of enemy pawns moving toward our king by [type][distance from edge][rank]
@@ -157,19 +342,19 @@ namespace {
 
         // Score this pawn
         if (!neighbours)
-            score -= Isolated[opposed];
+            score -= Isolated[pos.variant()][opposed];
 
         else if (backward)
-            score -= Backward[opposed];
+            score -= Backward[pos.variant()][opposed];
 
         else if (!supported)
-            score -= Unsupported;
+            score -= Unsupported[pos.variant()];
 
         if (connected)
             score += Connected[opposed][!!phalanx][more_than_one(supported)][relative_rank(Us, s)];
 
         if (doubled)
-            score -= Doubled;
+            score -= Doubled[pos.variant()];
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
@@ -247,7 +432,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
       b  = theirPawns & file_bb(f);
       Rank rkThem = b ? relative_rank(Us, frontmost_sq(Them, b)) : RANK_1;
 
-      safety -=  ShelterWeakness[std::min(f, FILE_H - f)][rkUs]
+      safety -=  ShelterWeakness[pos.variant()][std::min(f, FILE_H - f)][rkUs]
                + StormDanger
                  [f == file_of(ksq) && rkThem == relative_rank(Us, ksq) + 1 ? BlockedByKing  :
                   rkUs   == RANK_1                                          ? NoFriendlyPawn :
@@ -268,6 +453,9 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
   kingSquares[Us] = ksq;
   castlingRights[Us] = pos.can_castle(Us);
   int minKingPawnDistance = 0;
+#ifdef THREECHECK
+  CheckCount checks = pos.is_three_check() ? pos.checks_given(~Us) : CHECKS_0;
+#endif
 
   Bitboard pawns = pos.pieces(Us, PAWN);
   if (pawns)
@@ -282,7 +470,12 @@ Score Entry::do_king_safety(const Position& pos, Square ksq) {
   if (pos.can_castle(MakeCastling<Us, QUEEN_SIDE>::right))
       bonus = std::max(bonus, shelter_storm<Us>(pos, relative_square(Us, SQ_C1)));
 
+#ifdef THREECHECK
+  // Decrease score when checks have been taken
+  return make_score(bonus, (-16 * minKingPawnDistance) + (-2 * checks));
+#else
   return make_score(bonus, -16 * minKingPawnDistance);
+#endif
 }
 
 // Explicit template instantiation
