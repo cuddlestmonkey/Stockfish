@@ -89,7 +89,7 @@ namespace {
 
   void setoption(istringstream& is) {
 
-    string token, name, value, v;
+    string token, name, value;
 
     is >> token; // Consume "name" token
 
