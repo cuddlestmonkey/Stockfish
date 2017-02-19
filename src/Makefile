@@ -29,7 +29,8 @@ endif
 
 ### Executable name
 
-EXE = McBrain_2017-v1.2
+EXE = McBrain_2017-v1.3
+
 
 ### Installation dir definitions
 PREFIX = /usr/local
