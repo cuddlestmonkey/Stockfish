@@ -149,9 +149,7 @@ namespace {
 
 
   Value bonus(Depth depth)   { int d = depth / ONE_PLY ; return  Value(d * d + 2 * d - 2); }
-  Value penalty(Depth depth) { int d = depth / ONE_PLY ; return -Value(d * d + 4 * d + 1); }
-
-
+ 
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
 
