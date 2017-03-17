@@ -51,9 +51,7 @@ namespace {
 
 /// Version number. If Version is left empty, then compile date in the format
 /// DD-MM-YY and show in engine_info.
-
-const string Version = "v1.3";
-
+const string Version = "";
 
 /// Our fancy logging facility. The trick here is to replace cin.rdbuf() and
 /// cout.rdbuf() with two Tie objects that tie cin and cout to a file stream. We
@@ -206,6 +204,12 @@ void prefetch(void* addr) {
 }
 
 #endif
+
+void prefetch2(void* addr) {
+
+    prefetch(addr);
+    prefetch((uint8_t*)addr + 64);
+}
 
 namespace WinProcGroup {
 

@@ -28,9 +28,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-
-EXE = McBrain_2017-v1.3
-
+EXE = stockfish
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -42,7 +40,7 @@ PGOBENCH = ./$(EXE) bench
 ### Object files
 OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
 	material.o misc.o movegen.o movepick.o pawns.o position.o psqt.o \
-	search.o thread.o timeman.o tt.o tzbook.o uci.o ucioption.o syzygy/tbprobe.o
+	search.o thread.o timeman.o tt.o uci.o ucioption.o syzygy/tbprobe.o
 
 ### ==========================================================================
 ### Section 2. High-level Configuration
@@ -157,7 +155,7 @@ ifeq ($(COMP),gcc)
 	ifeq ($(ARCH),armv7)
 		ifeq ($(OS),Android)
 			CXXFLAGS += -m$(bits)
-		        LDFLAGS += -m$(bits)
+			LDFLAGS += -m$(bits)
 		endif
 	else
 		CXXFLAGS += -m$(bits)
