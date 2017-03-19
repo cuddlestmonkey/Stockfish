@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
   Threads.init();
   Tablebases::init(Options["SyzygyPath"]);
   TT.resize(Options["Hash"]);
-  tzbook.init(Options["BookPath"]);	
+  tzbook.init(Options["BookPath"]);
 
   UCI::loop(argc, argv);
 

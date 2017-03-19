@@ -28,7 +28,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = McBrain_2017-v1.3
+EXE = McBrainv20
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -38,9 +38,11 @@ BINDIR = $(PREFIX)/bin
 PGOBENCH = ./$(EXE) bench
 
 ### Object files
-OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
-	material.o misc.o movegen.o movepick.o pawns.o position.o psqt.o \
-	search.o thread.o timeman.o tt.o tzbook.o uci.o ucioption.o syzygy/tbprobe.o
+OBJS = movegen.o search.o evaluate.o material.o position.o psqt.o \
+	pawns.o movepick.o thread.o bitbase.o bitboard.o endgame.o \
+	syzygy/tbprobe.o timeman.o tt.o uci.o ucioption.o misc.o  \
+	main.o tzbook.o benchmark.o 
+
 
 ### ==========================================================================
 ### Section 2. High-level Configuration
@@ -155,9 +157,11 @@ ifeq ($(COMP),gcc)
 	ifeq ($(ARCH),armv7)
 		ifeq ($(OS),Android)
 			CXXFLAGS += -m$(bits)
+			LDFLAGS += -m$(bits)
 		endif
 	else
 		CXXFLAGS += -m$(bits)
+		LDFLAGS += -m$(bits)
 	endif
 
 	ifneq ($(KERNEL),Darwin)
@@ -226,8 +230,8 @@ endif
 endif
 
 ifeq ($(KERNEL),Darwin)
-	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.9
-	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.9
+	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.12
+	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.12
 endif
 
 ### Travis CI script uses COMPILER to overwrite CXX
@@ -424,6 +428,7 @@ help:
 
 build: config-sanity
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) all
+	strip $(EXE)
 
 profile-build: config-sanity objclean profileclean
 	@echo ""
@@ -439,6 +444,8 @@ profile-build: config-sanity objclean profileclean
 	@echo ""
 	@echo "Step 4/4. Deleting profile data ..."
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) profileclean
+	strip $(EXE)
+
 
 strip:
 	strip $(EXE)
