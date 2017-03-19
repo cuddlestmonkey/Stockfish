@@ -76,7 +76,7 @@ void init(OptionsMap& o) {
   o["Pruning"]               << Option(true);
   o["Razoring"]              << Option(true);
 
-  o["Variety"]               << Option(true);
+  o["Variety"]               << Option(false);
   o["UCI_Limit_Strength"]    << Option(false);
   o["UCI_Elo_Delay"]         << Option(false);
   o["UCI_Elo"]               << Option(1600, 1200, 2800);
