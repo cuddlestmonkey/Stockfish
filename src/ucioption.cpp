@@ -27,7 +27,7 @@
 #include "thread.h"
 #include "tt.h"
 #include "uci.h"
-#include "syzygy/tbprobe.h"
+#include "tbprobe.h"
 #include "tzbook.h"
 
 using std::string;
@@ -76,7 +76,7 @@ void init(OptionsMap& o) {
   o["Pruning"]               << Option(true);
   o["Razoring"]              << Option(true);
 
-  o["Variety"]               << Option(false);
+  o["Variety"]               << Option(0, 0, 8);
   o["UCI_Limit_Strength"]    << Option(false);
   o["UCI_Elo_Delay"]         << Option(false);
   o["UCI_Elo"]               << Option(1600, 1200, 2800);
@@ -84,6 +84,10 @@ void init(OptionsMap& o) {
   o["BookPath"]              << Option("<empty>", on_brainbook_path);
   o["Respect"]               << Option(10, -100, 100);
   o["Tactical"]              << Option(0, 0,  8);
+  // used to setup LMR reduction array based on depth and move count
+  o["LMRDepth"]				<< Option(120, 0, 300);
+  o["LMRDivisor"]			<< Option(195, 1, 600);
+  o["LMRMoveCount"]			<< Option(100, 0, 300);
 
   o["MultiPV"]               << Option(1, 1, 500);
   o["Skill Level"]           << Option(20, 0, 20);

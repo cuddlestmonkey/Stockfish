@@ -175,7 +175,7 @@ void MovePicker::score<EVASIONS>() {
 /// left. It picks the move with the biggest value from a list of generated moves
 /// taking care not to return the ttMove if it has already been searched.
 
-Move MovePicker::next_move() {
+Move MovePicker::next_move(bool skipQuiets, bool skipBadCaptures) {
 
   Move move;
 
@@ -248,7 +248,8 @@ Move MovePicker::next_move() {
       ++stage;
 
   case QUIET:
-      while (cur < endMoves)
+      while (cur < endMoves
+			 && (!skipQuiets || cur->value >= VALUE_ZERO))
       {
           move = *cur++;
           if (   move != ttMove
@@ -261,7 +262,7 @@ Move MovePicker::next_move() {
       cur = moves; // Point to beginning of bad captures
 
   case BAD_CAPTURES:
-      if (cur < endBadCaptures)
+       if (cur < endBadCaptures && !skipBadCaptures)
           return *cur++;
       break;
 

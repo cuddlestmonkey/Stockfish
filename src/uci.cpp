@@ -29,7 +29,7 @@
 #include "thread.h"
 #include "timeman.h"
 #include "uci.h"
-#include "syzygy/tbprobe.h"
+#include "tbprobe.h"
 
 using namespace std;
 
@@ -94,7 +94,7 @@ namespace {
     is >> token; // Consume "name" token
 
     // Read option name (can contain spaces)
-    while (is >> token && token != "value")
+    while (is >> token && (token != "value" && token != "v"))
         name += string(" ", name.empty() ? 0 : 1) + token;
 
     // Read option value (can contain spaces)
@@ -182,6 +182,7 @@ void UCI::loop(int argc, char* argv[]) {
       if (    token == "quit"
 		  ||  token == "q"
           ||  token == "stop"
+		  ||  token == "?"
           || (token == "ponderhit" && Search::Signals.stopOnPonderhit))
       {
           Search::Signals.stop = true;

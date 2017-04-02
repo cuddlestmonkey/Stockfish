@@ -27,7 +27,7 @@
 #include "tt.h"
 #include "tzbook.h"
 #include "uci.h"
-#include "syzygy/tbprobe.h"
+#include "tbprobe.h"
 
 namespace PSQT {
   void init();
@@ -42,7 +42,6 @@ int main(int argc, char* argv[]) {
   Bitboards::init();
   Position::init();
   Bitbases::init();
-  Search::init();
   Pawns::init();
   Threads.init();
   Tablebases::init(Options["SyzygyPath"]);
