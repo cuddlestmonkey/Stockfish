@@ -131,7 +131,7 @@ namespace {
         stoppers   = theirPawns & passed_pawn_mask(Us, s);
         lever      = theirPawns & pawnAttacksBB[s];
         leverPush  = theirPawns & pawnAttacksBB[s + Up];
-        doubled    = ourPawns   & (s + Up);
+        doubled    = ourPawns   & (s - Up);
         neighbours = ourPawns   & adjacent_files_bb(f);
         phalanx    = neighbours & rank_bb(s);
         supported  = neighbours & rank_bb(s - Up);
@@ -177,8 +177,8 @@ namespace {
         if (connected)
             score += Connected[opposed][!!phalanx][more_than_one(supported)][relative_rank(Us, s)];
 
-        if (doubled)
-            score -= Doubled;
+        if (doubled && !supported)
+           score -= Doubled;
 
         if (lever)
             score += Lever[relative_rank(Us, s)];
@@ -256,12 +256,13 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
       b  = theirPawns & file_bb(f);
       Rank rkThem = b ? relative_rank(Us, frontmost_sq(Them, b)) : RANK_1;
 
-      safety -=  ShelterWeakness[std::min(f, FILE_H - f)][rkUs]
+      int d = std::min(f, FILE_H - f);
+      safety -=  ShelterWeakness[d][rkUs]
                + StormDanger
                  [f == file_of(ksq) && rkThem == relative_rank(Us, ksq) + 1 ? BlockedByKing  :
                   rkUs   == RANK_1                                          ? Unopposed :
                   rkThem == rkUs + 1                                        ? BlockedByPawn  : Unblocked]
-                 [std::min(f, FILE_H - f)][rkThem];
+                 [d][rkThem];
   }
 
   return safety;
