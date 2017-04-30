@@ -28,7 +28,7 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = McBrain-v21a
+EXE = McBrain_2017_v22
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -41,8 +41,7 @@ PGOBENCH = ./$(EXE) bench
 OBJS = movegen.o search.o evaluate.o material.o position.o psqt.o \
 	pawns.o movepick.o thread.o bitbase.o bitboard.o endgame.o \
 	tbprobe.o timeman.o tt.o uci.o ucioption.o misc.o  \
-	main.o tzbook.o benchmark.o 
-
+	main.o tzbook.o benchmark.o
 
 ### ==========================================================================
 ### Section 2. High-level Configuration

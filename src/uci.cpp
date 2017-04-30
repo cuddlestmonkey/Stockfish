@@ -18,6 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -65,12 +66,12 @@ namespace {
     }
     else if (token == "fen")
         while (is >> token && token != "moves")
-            fen += token + " ";
-    else if (token == "f")
-	  while (is >> token && token != "moves")
-	  fen += token + " ";
+	    fen += token + " ";
+	    else if (token == "f")
+	    while (is >> token && token != "moves")
+	    fen += token + " ";
 	  else
-        return;
+   return;
 
     States = StateListPtr(new std::deque<StateInfo>(1));
     pos.set(fen, Options["UCI_Chess960"], &States->back(), Threads.main());
@@ -94,7 +95,7 @@ namespace {
     is >> token; // Consume "name" token
 
     // Read option name (can contain spaces)
-    while (is >> token && (token != "value" && token != "v"))
+    while (is >> token && token != "value")
         name += string(" ", name.empty() ? 0 : 1) + token;
 
     // Read option value (can contain spaces)
@@ -120,7 +121,7 @@ namespace {
     limits.startTime = now(); // As early as possible!
 
     while (is >> token)
-        if (token == "searchmoves")
+        if (token == "searchmoves" || token == "sm")
             while (is >> token)
                 limits.searchmoves.push_back(UCI::to_move(pos, token));
 
@@ -130,14 +131,12 @@ namespace {
         else if (token == "binc")      is >> limits.inc[BLACK];
         else if (token == "movestogo") is >> limits.movestogo;
         else if (token == "depth")     is >> limits.depth;
-	    else if (token == "d")     is >> limits.depth;
-	  
+	    else if (token == "d")         is >> limits.depth;
         else if (token == "nodes")     is >> limits.nodes;
         else if (token == "movetime")  is >> limits.movetime;
-	    else if (token == "mt")  is >> limits.movetime;
         else if (token == "mate")      is >> limits.mate;
         else if (token == "infinite")  limits.infinite = 1;
-	    else if (token == "i")  limits.infinite = 1;
+	    else if (token == "i")         limits.infinite = 1;
         else if (token == "ponder")    limits.ponder = 1;
 
     Threads.start_thinking(pos, States, limits);
@@ -164,10 +163,9 @@ void UCI::loop(int argc, char* argv[]) {
 
   do {
       if (argc == 1 && !getline(cin, cmd)) // Block here waiting for input or EOF
-	  cmd = "quit";
+          cmd = "quit";
 	  else if (token == "q")
 	  cmd = "quit";
-
 
       istringstream is(cmd);
 
@@ -181,7 +179,7 @@ void UCI::loop(int argc, char* argv[]) {
       // switching from pondering to normal search.
       if (    token == "quit"
 		  ||  token == "q"
-          ||  token == "stop"
+		  ||  token == "stop"
 		  ||  token == "?"
           || (token == "ponderhit" && Search::Signals.stopOnPonderhit))
       {
@@ -208,7 +206,6 @@ void UCI::loop(int argc, char* argv[]) {
 	  
 	  else if (token == "q")          cmd = "quit";
 	  
-	  
 	  else if (token == "position")
 	  {
 		  position(pos, is);
@@ -228,7 +225,6 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "flip")       pos.flip();
       else if (token == "bench")      benchmark(pos, is);
 	  else if (token == "b")          benchmark(pos, is);
-	  
       else if (token == "d")          sync_cout << pos << sync_endl;
       else if (token == "eval")       sync_cout << Eval::trace(pos) << sync_endl;
       else if (token == "perft")
@@ -245,7 +241,7 @@ void UCI::loop(int argc, char* argv[]) {
       else
           sync_cout << "Unknown command: " << cmd << sync_endl;
 
-  } while (token != "quit" && token != "q"   && argc == 1);// Passed args have one-shot behaviour
+  } while (token != "quit" && token != "q" && argc == 1); // Passed args have one-shot behaviour
 
   Threads.main()->wait_for_search_finished();
 }
@@ -259,6 +255,8 @@ void UCI::loop(int argc, char* argv[]) {
 ///           use negative values for y.
 
 string UCI::value(Value v) {
+	
+  assert(-VALUE_INFINITE < v && v < VALUE_INFINITE);
 
   stringstream ss;
 

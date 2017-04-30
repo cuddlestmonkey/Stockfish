@@ -25,7 +25,6 @@
 #include "search.h"
 #include "thread.h"
 #include "tt.h"
-#include "tzbook.h"
 #include "uci.h"
 #include "tbprobe.h"
 
@@ -46,7 +45,6 @@ int main(int argc, char* argv[]) {
   Threads.init();
   Tablebases::init(Options["SyzygyPath"]);
   TT.resize(Options["Hash"]);
-  tzbook.init(Options["BookPath"]);
 
   UCI::loop(argc, argv);
 
