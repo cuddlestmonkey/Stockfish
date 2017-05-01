@@ -66,12 +66,10 @@ void init(OptionsMap& o) {
 	
 	o["Clear Hash"]            << Option(on_clear_hash);
 	o["Clean Search"]          << Option(false);
-	o["Botvinnik-Markov"]      << Option(true);
 	o["BruteForce"]            << Option(false);
 	o["FastPlay"]              << Option(false);
 	o["MateFinder"]            << Option(false);
 	o["No_Null_Moves"]         << Option(false);
-
 	
 	o["Variety"]               << Option(0, 0, 8);
 	o["UCI_Limit_Strength"]    << Option(false);
