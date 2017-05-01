@@ -292,14 +292,6 @@ void MainThread::search() {
   }
   else
   {
-      for (Thread* th : Threads)
-          if (th != this)
-              th->start_searching();
-
-      Thread::search(); // Let's start searching!
-  }
-
-  {
 	  Move bookMove = MOVE_NONE;
 		
 	  if (!Limits.infinite && !Limits.mate)
