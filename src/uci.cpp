@@ -229,7 +229,7 @@ void UCI::loop(int argc, char* argv[]) {
 ///           use negative values for y.
 
 string UCI::value(Value v) {
-	
+
   assert(-VALUE_INFINITE < v && v < VALUE_INFINITE);
 
   stringstream ss;
