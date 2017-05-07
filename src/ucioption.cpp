@@ -77,7 +77,7 @@ void init(OptionsMap& o) {
 	o["UCI_Elo"]               << Option(1600, 1200, 2800);
 	o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
 	o["BookPath"]              << Option("<empty>", on_brainbook_path);
-	o["Respect"]               << Option(10, -100, 100);
+	o["Respect"]               << Option(0, -100, 100);
 	o["Tactical"]              << Option(0, 0,  8);
 	
 	o["MultiPV"]               << Option(1, 1, 500);
