@@ -43,7 +43,7 @@ void on_logger(const Option& o) { start_logger(o); }
 void on_threads(const Option&) { Threads.read_uci_options(); }
 void on_tb_path(const Option& o) { Tablebases::init(o); }
 void on_brainbook_path(const Option& o) { tzbook.init(o); }
-void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o);}
+void on_book_move2_prob(const Option& o) { tzbook.set_book_move2_probability(o); }
 
 
 /// Our case insensitive less() function as required by UCI protocol
@@ -70,11 +70,9 @@ void init(OptionsMap& o) {
 	o["FastPlay"]              << Option(false);
 	o["MateFinder"]            << Option(false);
 	o["No_Null_Moves"]         << Option(false);
-	
-	o["Variety"]               << Option(0, 0, 8);
 	o["UCI_Limit_Strength"]    << Option(false);
-	o["UCI_Elo_Delay"]         << Option(false);
-	o["UCI_Elo"]               << Option(1600, 1200, 2800);
+	o["UCI_ELO"]               << Option(1725, 1725, 2825);
+	o["Variety"]               << Option(0, 0, 8);
 	o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
 	o["BookPath"]              << Option("<empty>", on_brainbook_path);
 	o["Respect"]               << Option(0, -100, 100);
@@ -85,7 +83,7 @@ void init(OptionsMap& o) {
 	o["Move Overhead"]         << Option(30, 0, 5000);
 	o["Minimum Thinking Time"] << Option(20, 0, 5000);
 	o["Slow Mover"]            << Option(89, 10, 1000);
-	o["nodestime"]             << Option(0, 0, 10000);
+	o["nodestime"]             << Option(0, 0, 10000);;
 	o["UCI_Chess960"]          << Option(false);
 	o["SyzygyPath"]            << Option("<empty>", on_tb_path);
 	o["SyzygyProbeDepth"]      << Option(1, 1, 100);

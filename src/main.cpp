@@ -24,7 +24,6 @@
 #include "position.h"
 #include "search.h"
 #include "thread.h"
-#include "tt.h"
 #include "uci.h"
 #include "tbprobe.h"
 #include "tzbook.h"
@@ -42,10 +41,10 @@ int main(int argc, char* argv[]) {
   Bitboards::init();
   Position::init();
   Bitbases::init();
+  Search::init();
   Pawns::init();
   Threads.init();
-  Tablebases::init(Options["SyzygyPath"]);
-  TT.resize(Options["Hash"]);
+  tzbook.init(Options["BookPath"]);
 
   UCI::loop(argc, argv);
 

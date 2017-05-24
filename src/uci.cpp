@@ -28,6 +28,7 @@
 #include "position.h"
 #include "search.h"
 #include "thread.h"
+#include "tt.h"
 #include "timeman.h"
 #include "uci.h"
 #include "tbprobe.h"
@@ -142,6 +143,15 @@ namespace {
 		Threads.start_thinking(pos, States, limits);
 	}
 	
+  // On ucinewgame following steps are needed to reset the state
+  void newgame() {
+
+    TT.resize(Options["Hash"]);
+    Search::clear();
+    Tablebases::init(Options["SyzygyPath"]);
+    Time.availableNodes = 0;
+  }
+
 } // namespace
 
 
@@ -152,9 +162,11 @@ namespace {
 /// In addition to the UCI ones, also some additional debug commands are supported.
 
 void UCI::loop(int argc, char* argv[]) {
-	
-	Position pos;
-	string token, cmd;
+
+  Position pos;
+  string token, cmd;
+
+  newgame(); // Implied ucinewgame before the first position command
 	
 	pos.set(StartFEN, false, &States->back(), Threads.main());
 	
@@ -196,6 +208,7 @@ void UCI::loop(int argc, char* argv[]) {
 		
 		else if (token == "ucinewgame")
 		{
+			newgame();
 			Search::clear();
 			Tablebases::init(Options["SyzygyPath"]);
 			Time.availableNodes = 0;
@@ -255,8 +268,8 @@ void UCI::loop(int argc, char* argv[]) {
 ///           use negative values for y.
 
 string UCI::value(Value v) {
-	
-  assert(-VALUE_INFINITE < v && v < VALUE_INFINITE);	
+
+  assert(-VALUE_INFINITE < v && v < VALUE_INFINITE);
 
   stringstream ss;
 
