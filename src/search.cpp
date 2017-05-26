@@ -881,7 +881,7 @@ namespace {
 			  && !PvNode
 			  &&  eval >= beta
 			  && (ss->staticEval >= beta - 35 * (depth / ONE_PLY - 6) || depth >= 13 * ONE_PLY)
-			  &&  thisThread->maxPly + 5 * ONE_PLY > thisThread->rootDepth // helps with this 1q2k3/1Pp1Pp1K/2P2B2/8/8/8/8/8 w - - 5 1
+			  &&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth // helps with this 1q2k3/1Pp1Pp1K/2P2B2/8/8/8/8/8 w - - 5 1
 			  &&  abs(eval) < 2 * VALUE_KNOWN_WIN
 			  &&  pos.non_pawn_material(pos.side_to_move())
 			  &&  pos.non_pawn_material(~pos.side_to_move())
@@ -926,6 +926,7 @@ namespace {
 			&& !PvNode
 			&&  eval >= beta
 			&& (ss->staticEval >= beta - 35 * (depth / ONE_PLY - 6) || depth >= 13 * ONE_PLY)
+			&&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth // helps with this 1q2k3/1Pp1Pp1K/2P2B2/8/8/8/8/8 w - - 5 1
 			&&  pos.non_pawn_material(pos.side_to_move()))
 		{
 
@@ -1079,7 +1080,7 @@ moves_loop: // When in check search starts from here
 
       ss->moveCount = ++moveCount;
 
-      if (rootNode && thisThread == Threads.main() && Time.elapsed() > 3000)
+      if (showInfo && rootNode && thisThread == Threads.main() && Time.elapsed() > 3000)
           sync_cout << "info depth " << depth / ONE_PLY
                     << " currmove " << UCI::move(move, pos.is_chess960())
                     << " currmovenumber " << moveCount + thisThread->PVIdx << sync_endl;
@@ -1261,8 +1262,14 @@ moves_loop: // When in check search starts from here
               ss->history =  cmh[moved_piece][to_sq(move)]
                            + fmh[moved_piece][to_sq(move)]
                            + fm2[moved_piece][to_sq(move)]
-                           + thisThread->history.get(~pos.side_to_move(), move)
-                           - 4000; // Correction factor
+			  + thisThread->history.get(~pos.side_to_move(), move) * 23 / 16;
+                          // - 4000; // Correction factor
+			  
+			  if ((pos.nodes_searched() % 2097152) == 0) {
+				  int diff =  ss->history - thisThread->meanH;
+				  thisThread->meanH = ( (thisThread->meanH  * 4194304) + diff ) /4194304;
+				  ss->rHist = (ss->history - thisThread->meanH);
+			  }
 
               // Decrease/increase reduction by comparing opponent's stat score
               if (ss->history > 0 && (ss-1)->history < 0)
@@ -1272,7 +1279,7 @@ moves_loop: // When in check search starts from here
                   r += ONE_PLY;
 
               // Decrease/increase reduction for moves with a good/bad history
-              r = std::max(DEPTH_ZERO, (r / ONE_PLY - ss->history / 20000) * ONE_PLY);
+              r = std::max(DEPTH_ZERO, (r / ONE_PLY - (ss->history - ss->rHist) / 20000) * ONE_PLY);
           }
 		  //if (findMate && newDepth - r + 8 * ONE_PLY < thisThread->rootDepth )
 			//  r = std::min(r, 3 * ONE_PLY);
@@ -1542,10 +1549,9 @@ moves_loop: // When in check search starts from here
       if (   !InCheck
           && !givesCheck
           &&  futilityBase > -VALUE_KNOWN_WIN
-          && !pos.advanced_pawn_push(move))
+           && type_of(move) == NORMAL)
       {
-          assert(type_of(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
-
+      
           futilityValue = futilityBase + PieceValue[EG][pos.piece_on(to_sq(move))];
 
           if (futilityValue <= alpha)
@@ -1569,7 +1575,7 @@ moves_loop: // When in check search starts from here
 
       // Don't search moves with negative SEE values
       if (  (!InCheck || evasionPrunable)
-          &&  type_of(move) != PROMOTION
+          && (depth != DEPTH_ZERO || type_of(move) != PROMOTION)
           &&  !pos.see_ge(move))
           continue;
 
