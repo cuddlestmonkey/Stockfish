@@ -71,7 +71,7 @@ void init(OptionsMap& o) {
 	o["MateFinder"]            << Option(false);
 	o["No_Null_Moves"]         << Option(false);
 	o["UCI_Limit_Strength"]    << Option(false);
-	o["UCI_ELO"]               << Option(1725, 1725, 2825);
+	o["UCI_ELO"]               << Option(1500, 1500, 2900);
 	o["Variety"]               << Option(0, 0, 8);
 	o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
 	o["BookPath"]              << Option("<empty>", on_brainbook_path);

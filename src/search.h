@@ -47,6 +47,9 @@ struct Stack {
   int history;
   int rHist;
   int moveCount;
+  Depth newDepth;	
+  uint8_t forcedMove;
+  uint8_t forcingTree;
 };
 
 

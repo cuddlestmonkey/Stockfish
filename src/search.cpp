@@ -296,8 +296,8 @@ void MainThread::search() {
 			  int uci_elo = (Options["UCI_Elo"]);
 			  
 			  uci_elo += rand() % (33 - -33 );
-			  int NodesToSearch   = pow(1.0069555500567,(((uci_elo)/1725) - 1 )
-								  + (uci_elo - 1725)) * 32 ;
+			  int NodesToSearch   = pow(1.005958946,(((uci_elo)/1500) - 1 )
+								  + (uci_elo - 1500)) * 32 ;
 			  Limits.nodes = NodesToSearch;
 			  
 			  Limits.nodes *= std::max(1,Time.optimum()/1000 );
@@ -608,7 +608,7 @@ namespace {
     bool ttHit, inCheck, givesCheck, singularExtensionNode, improving;
     bool captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
     Piece moved_piece;
-    int moveCount, quietCount;
+	int moveCount, quietCount;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -617,6 +617,11 @@ namespace {
     ss->history = 0;
     bestValue = -VALUE_INFINITE;
     ss->ply = (ss-1)->ply + 1;
+	ss->forcedMove = 0;
+	  
+	ss->forcingTree = ((ss - 2)->forcingTree && (ss - 2)->forcedMove) // Recursive forcing tree.
+	    || (ss->ply == 2 && (ss - 1)->moveCount > 1)          // Offensive forcing tree
+	    || (ss->ply == 3 && (ss - 2)->moveCount == 1);     // Defensive forcing tree
 
     // Check for the available remaining time
     if (thisThread->resetCalls.load(std::memory_order_relaxed))
@@ -811,10 +816,11 @@ namespace {
         tte->save(posKey, VALUE_NONE, BOUND_NONE, DEPTH_NONE, MOVE_NONE,
                   ss->staticEval, TT.generation());
     }
-
-    if (skipEarlyPruning)
-        goto moves_loop;
 	  
+	  if (skipEarlyPruning  )
+	  {
+		  goto moves_loop;
+	  }
 	  if (findMate) {
 		  // Step 6. Razoring (skipped when in check)
 		  if (   !bruteForce
@@ -1106,23 +1112,32 @@ moves_loop: // When in check search starts from here
       // is singular and should be extended. To verify this we do a reduced search
       // on all the other moves but the ttMove and if the result is lower than
       // ttValue minus a margin then we will extend the ttMove.
-      if (    singularExtensionNode
-          &&  move == ttMove
-          &&  pos.legal(move))
-      {
-          Value rBeta = std::max(ttValue - 2 * depth / ONE_PLY, -VALUE_MATE);
-          Depth d = (depth / (2 * ONE_PLY)) * ONE_PLY;
-          ss->excludedMove = move;
-          value = search<NonPV>(pos, ss, rBeta - 1, rBeta, d, cutNode, true);
-          ss->excludedMove = MOVE_NONE;
 
-          if (value < rBeta)
-              extension = ONE_PLY;
-      }
-      else if (    givesCheck
-               && !moveCountPruning
-               &&  pos.see_ge(move))
-          extension = ONE_PLY;
+	 if (    singularExtensionNode
+	 		 &&  move == ttMove
+			 &&  pos.legal(move))
+		{
+			 Value rBeta = std::max(ttValue - 2 * depth / ONE_PLY, -VALUE_MATE);
+			 Depth d = (depth / (2 * ONE_PLY)) * ONE_PLY;
+			 ss->excludedMove = move;
+			 value = search<NonPV>(pos, ss, rBeta - 1, rBeta, d, cutNode, true);
+			 ss->excludedMove = MOVE_NONE;
+			
+			 if (value < rBeta)
+			 extension = ONE_PLY;
+		 }
+		
+	  else if (    givesCheck
+	  		  && !moveCountPruning
+			  &&  pos.see_ge(move))
+		  extension = ONE_PLY;
+		
+	  else if (    ss->forcingTree && (ss - 1)->newDepth - depth > 1)
+		  extension = ONE_PLY;
+	
+	  else if (    pos.far_advanced_pawn_push(move)
+			       && pos.non_pawn_material(pos.side_to_move()) <=  RookValueMg)
+		  extension = ONE_PLY;
 
       // Calculate new depth for this move
       newDepth = depth - ONE_PLY + extension;
@@ -1231,6 +1246,8 @@ moves_loop: // When in check search starts from here
       // Update the current move (this must be done after singular extension search)
       ss->currentMove = move;
       ss->counterMoves = &thisThread->counterMoveHistory[moved_piece][to_sq(move)];
+	  ss->forcedMove = (extension || inCheck || captureOrPromotion) && -(ss - 1)->staticEval < alpha - PawnValueEg / 2  && ss->staticEval > alpha - PawnValueEg / 2;
+	  ss->newDepth = newDepth;
 
       // Step 14. Make the move
       pos.do_move(move, st, givesCheck);
@@ -1279,7 +1296,7 @@ moves_loop: // When in check search starts from here
                   r += ONE_PLY;
 
               // Decrease/increase reduction for moves with a good/bad history
-              r = std::max(DEPTH_ZERO, (r / ONE_PLY - (ss->history - ss->rHist) / 20000) * ONE_PLY);
+              r = std::max(DEPTH_ZERO, (r / ONE_PLY - (ss->history - ss->rHist -4000) / 20000) * ONE_PLY);
           }
 		  //if (findMate && newDepth - r + 8 * ONE_PLY < thisThread->rootDepth )
 			//  r = std::min(r, 3 * ONE_PLY);

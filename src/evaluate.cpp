@@ -618,7 +618,8 @@ namespace {
 
         assert(!(pos.pieces(Them, PAWN) & forward_bb(Us, s + pawn_push(Us))));
 
-        bb = forward_bb(Us, s) & (ei.attackedBy[Them][ALL_PIECES] | pos.pieces(Them));
+        //bb = forward_bb(Us, s) & (ei.attackedBy[Them][ALL_PIECES] | pos.pieces(Them));
+		bb = forward_bb(Us, s) & (ei.attackedBy[Them][ALL_PIECES] | (pos.pieces(Them) ^ pos.pieces(Them, PAWN)));
         score -= HinderPassedPawn * popcount(bb);
 
         int r = relative_rank(Us, s) - RANK_2;
@@ -895,7 +896,7 @@ std::string Eval::trace(const Position& pos) {
      << "      Imbalance | " << Term(IMBALANCE)
      << "          Pawns | " << Term(PAWN)
      << "        Knights | " << Term(KNIGHT)
-     << "         Bishop | " << Term(BISHOP)
+     << "        Bishops | " << Term(BISHOP)
      << "          Rooks | " << Term(ROOK)
      << "         Queens | " << Term(QUEEN)
      << "       Mobility | " << Term(MOBILITY)
