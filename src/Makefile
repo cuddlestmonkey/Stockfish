@@ -29,7 +29,7 @@ endif
 
 ### Executable name
 EXE = McBrain_2017_v25b
-# bench =  6323684
+# bench =  6194149
 
 ### Installation dir definitions
 PREFIX = /usr/local
