@@ -201,14 +201,15 @@ void Search::clear() {
 
   for (Thread* th : Threads)
   {
-      th->counterMoves.clear();
-      th->history.clear();
-      th->counterMoveHistory.clear();
       th->resetCalls = true;
+      th->counterMoves.fill(MOVE_NONE);
+      th->history.fill(0);
 
-      CounterMoveStats& cm = th->counterMoveHistory[NO_PIECE][0];
-      auto* t = &cm[NO_PIECE][0];
-      std::fill(t, t + sizeof(cm)/sizeof(*t), CounterMovePruneThreshold - 1);
+      for (auto& to : th->counterMoveHistory)
+          for (auto& h : to)
+              h.fill(0);
+
+      th->counterMoveHistory[NO_PIECE][0].fill(CounterMovePruneThreshold - 1);
   }
 
   Threads.main()->previousScore = VALUE_INFINITE;
@@ -262,6 +263,7 @@ void MainThread::search() {
 
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
+  TT.new_search();	
 
   respect = Options["Respect"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW + Value(respect);
@@ -382,7 +384,7 @@ void Thread::search() {
 
   std::memset(ss-4, 0, 7 * sizeof(Stack));
   for(int i = 4; i > 0; i--)
-     (ss-i)->counterMoves = &this->counterMoveHistory[NO_PIECE][0]; // Use as sentinel
+     (ss-i)->history = &this->counterMoveHistory[NO_PIECE][0]; // Use as sentinel
 
   bestValue = delta = alpha = -VALUE_INFINITE;
   beta = VALUE_INFINITE;
@@ -394,7 +396,6 @@ void Thread::search() {
       EasyMove.clear();
       mainThread->easyMovePlayed = mainThread->failedLow = false;
       mainThread->bestMoveChanges = 0;
-      TT.new_search();
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -608,13 +609,13 @@ namespace {
     bool ttHit, inCheck, givesCheck, singularExtensionNode, improving;
     bool captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
     Piece moved_piece;
-	int moveCount, quietCount;
+    int moveCount, quietCount;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
     inCheck = pos.checkers();
     moveCount = quietCount = ss->moveCount = 0;
-    ss->history = 0;
+    ss->statScore = 0;
     bestValue = -VALUE_INFINITE;
     ss->ply = (ss-1)->ply + 1;
 	ss->forcedMove = 0;
@@ -668,7 +669,7 @@ namespace {
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
     ss->currentMove = (ss+1)->excludedMove = bestMove = MOVE_NONE;
-    ss->counterMoves = &thisThread->counterMoveHistory[NO_PIECE][0];
+    ss->history = &thisThread->counterMoveHistory[NO_PIECE][0];
     (ss+2)->killers[0] = (ss+2)->killers[1] = MOVE_NONE;
     Square prevSq = to_sq((ss-1)->currentMove);
 
@@ -817,10 +818,9 @@ namespace {
                   ss->staticEval, TT.generation());
     }
 	  
-	  if (skipEarlyPruning  )
-	  {
-		  goto moves_loop;
-	  }
+	  if (skipEarlyPruning)
+               goto moves_loop;
+
 	  if (findMate) {
 		  // Step 6. Razoring (skipped when in check)
 		  if (   !bruteForce
@@ -900,7 +900,7 @@ namespace {
 			  Depth R = ((823 + 67 * depth / ONE_PLY) / 256 + std::min((eval - beta) / PawnValueMg, 3)) * ONE_PLY;
 			  
 			  ss->currentMove = MOVE_NULL;
-			  ss->counterMoves = &thisThread->counterMoveHistory[NO_PIECE][0];
+			  ss->history = &thisThread->counterMoveHistory[NO_PIECE][0];
 			  
 			  pos.do_null_move(st);
 			  Value nullValue = depth-R < ONE_PLY ? -qsearch<NonPV, false>(pos, ss+1, -beta, -beta+1)
@@ -942,7 +942,7 @@ namespace {
 			Depth R = ((823 + 67 * depth / ONE_PLY) / 256 + std::min((eval - beta) / PawnValueMg, 3)) * ONE_PLY;
 
 			ss->currentMove = MOVE_NULL;
-			ss->counterMoves = &thisThread->counterMoveHistory[NO_PIECE][0];
+			ss->history = &thisThread->counterMoveHistory[NO_PIECE][0];
 
 			pos.do_null_move(st);
 			Value nullValue = depth-R < ONE_PLY ? -qsearch<NonPV, false>(pos, ss+1, -beta, -beta+1)
@@ -992,7 +992,7 @@ namespace {
 				  if (pos.legal(move))
 				  {
 					  ss->currentMove = move;
-					  ss->counterMoves = &thisThread->counterMoveHistory[pos.moved_piece(move)][to_sq(move)];
+					  ss->history  = &thisThread->counterMoveHistory[pos.moved_piece(move)][to_sq(move)];
 					  
 					  pos.do_move(move, st);
 					  value = -search<NonPV>(pos, ss+1, -rbeta, -rbeta+1, rdepth, !cutNode, false);
@@ -1024,7 +1024,7 @@ namespace {
 			    	if (pos.legal(move))
 					{
 					  ss->currentMove = move;
-					  ss->counterMoves = &thisThread->counterMoveHistory[pos.moved_piece(move)][to_sq(move)];
+					  ss->history  = &thisThread->counterMoveHistory[pos.moved_piece(move)][to_sq(move)];
 
 					  pos.do_move(move, st);
 					  value = -search<NonPV>(pos, ss+1, -rbeta, -rbeta+1, rdepth, !cutNode, false);
@@ -1049,9 +1049,9 @@ namespace {
 
 moves_loop: // When in check search starts from here
 
-    const CounterMoveStats& cmh = *(ss-1)->counterMoves;
-    const CounterMoveStats& fmh = *(ss-2)->counterMoves;
-    const CounterMoveStats& fm2 = *(ss-4)->counterMoves;
+    const PieceToHistory& cmh = *(ss-1)->history;
+    const PieceToHistory& fmh = *(ss-2)->history;
+    const PieceToHistory& fm2 = *(ss-4)->history;
 
     MovePicker mp(pos, ttMove, depth, ss);
     value = bestValue; // Workaround a bogus 'uninitialized' warning under gcc
@@ -1245,19 +1245,21 @@ moves_loop: // When in check search starts from here
 
       // Update the current move (this must be done after singular extension search)
       ss->currentMove = move;
-      ss->counterMoves = &thisThread->counterMoveHistory[moved_piece][to_sq(move)];
+      ss->history  = &thisThread->counterMoveHistory[moved_piece][to_sq(move)];
 	  ss->forcedMove = (extension || inCheck || captureOrPromotion) && -(ss - 1)->staticEval < alpha - PawnValueEg / 2  && ss->staticEval > alpha - PawnValueEg / 2;
 	  ss->newDepth = newDepth;
 
       // Step 14. Make the move
       pos.do_move(move, st, givesCheck);
-
-      // Step 15. Reduced depth search (LMR). If the move fails high it will be
+	  
+	  // Step 15. Reduced depth search (LMR). If the move fails high it will be
       // re-searched at full depth.
       if (   !bruteForce
 		  && depth >= 3 * ONE_PLY
           &&  moveCount > 1
           && (!captureOrPromotion || moveCountPruning))
+          //&&  thisThread->maxPly > depth
+          //&& !(depth >= 16 * ONE_PLY && ss->ply <= 3 * ONE_PLY))
       {
           Depth r = reduction<PvNode>(improving, depth, moveCount);
 
@@ -1276,39 +1278,38 @@ moves_loop: // When in check search starts from here
                        && !pos.see_ge(make_move(to_sq(move), from_sq(move))))
                   r -= 2 * ONE_PLY;
 
-              ss->history =  cmh[moved_piece][to_sq(move)]
+              ss->statScore =  cmh[moved_piece][to_sq(move)]
                            + fmh[moved_piece][to_sq(move)]
                            + fm2[moved_piece][to_sq(move)]
-			  + thisThread->history.get(~pos.side_to_move(), move) * 23 / 16;
-                          // - 4000; // Correction factor
+			   + thisThread->history[~pos.side_to_move()][from_to(move)];
 			  
 			  if ((pos.nodes_searched() % 2097152) == 0) {
-				  int diff =  ss->history - thisThread->meanH;
+				  int diff =  ss->statScore - thisThread->meanH;
 				  thisThread->meanH = ( (thisThread->meanH  * 4194304) + diff ) /4194304;
-				  ss->rHist = (ss->history - thisThread->meanH);
+				  ss->rHist = (ss->statScore - thisThread->meanH);
 			  }
 
               // Decrease/increase reduction by comparing opponent's stat score
-              if (ss->history > 0 && (ss-1)->history < 0)
+              if (ss->statScore > 0 && (ss-1)->statScore < 0)
                   r -= ONE_PLY;
 
-              else if (ss->history < 0 && (ss-1)->history > 0)
+              else if (ss->statScore < 0 && (ss-1)->statScore > 0)
                   r += ONE_PLY;
 
               // Decrease/increase reduction for moves with a good/bad history
-              r = std::max(DEPTH_ZERO, (r / ONE_PLY - (ss->history - ss->rHist -4000) / 20000) * ONE_PLY);
+              r = std::max(DEPTH_ZERO, (r / ONE_PLY - (ss->statScore - ss->rHist - 4000) / 20000) * ONE_PLY);
           }
-		  //if (findMate && newDepth - r + 8 * ONE_PLY < thisThread->rootDepth )
-			//  r = std::min(r, 3 * ONE_PLY);
+		  if (findMate && newDepth - r + 8 * ONE_PLY < thisThread->rootDepth )
+			  r = std::min(r, 3 * ONE_PLY);
 
           Depth d = std::max(newDepth - r, ONE_PLY);
 
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, d, true, false);
 
           doFullDepthSearch = (value > alpha && d != newDepth);
-      }
+	  }
       else
-          doFullDepthSearch = !PvNode || moveCount > 1;
+	    doFullDepthSearch = !PvNode || moveCount > 1;
 
       // Step 16. Full depth search when LMR is skipped or fails high
       if (doFullDepthSearch)
@@ -1702,7 +1703,7 @@ moves_loop: // When in check search starts from here
 
     for (int i : {1, 2, 4})
         if (is_ok((ss-i)->currentMove))
-            (ss-i)->counterMoves->update(pc, s, bonus);
+            (ss-i)->history->update(pc, s, bonus);
   }
 
 
@@ -1725,7 +1726,7 @@ moves_loop: // When in check search starts from here
     if (is_ok((ss-1)->currentMove))
     {
         Square prevSq = to_sq((ss-1)->currentMove);
-        thisThread->counterMoves.update(pos.piece_on(prevSq), prevSq, move);
+        thisThread->counterMoves[pos.piece_on(prevSq)][prevSq]=move;
     }
 
     // Decrease all the other played quiet moves
