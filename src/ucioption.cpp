@@ -74,7 +74,7 @@ void init(OptionsMap& o) {
 	o["UCI_ELO"]               << Option(1500, 1500, 2900);
 	o["Variety"]               << Option(0, 0, 8);
 	o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
-	o["BookPath"]              << Option("/applications/tzbook/cerebellum_light.bin", on_brainbook_path);
+	o["BookPath"]              << Option("<empty>", on_brainbook_path);
 	o["Respect"]               << Option(0, -100, 100);
 	o["Tactical"]              << Option(0, 0,  8);
 	
@@ -85,7 +85,7 @@ void init(OptionsMap& o) {
 	o["Slow Mover"]            << Option(89, 10, 1000);
 	o["nodestime"]             << Option(0, 0, 10000);;
 	o["UCI_Chess960"]          << Option(false);
-	o["SyzygyPath"]            << Option("/applications/tablebases", on_tb_path);
+	o["SyzygyPath"]            << Option("<empty>", on_tb_path);
 	o["SyzygyProbeDepth"]      << Option(1, 1, 100);
 	o["Syzygy50MoveRule"]      << Option(true);
 	o["SyzygyProbeLimit"]      << Option(6, 0, 6);

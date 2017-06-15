@@ -24,6 +24,8 @@
 #include <cstring>   // For std::memset
 #include <iostream>
 #include <sstream>
+#include <random>
+
 
 #include "tzbook.h"
 #include "evaluate.h"
@@ -69,9 +71,9 @@ namespace {
   const int skipPhase[] = { 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7 };
 
   // Razoring and futility margin based on depth
-  // razor_margin[0] is unused as long as depth >= ONE_PLY in search
+  // They are strictly positive because depth >= ONE_PLY in search
   const int razor_margin[] = { 0, 570, 603, 554 };
-  Value futility_margin(Depth d) { return Value(150 * d / ONE_PLY); }
+  Value futility_margin(Depth d) { return Value(145 * d / ONE_PLY - 37); }
 
   // Futility and reductions lookup tables, initialized at startup
   int FutilityMoveCounts[2][16]; // [improving][depth]
@@ -297,7 +299,10 @@ void MainThread::search() {
 			  
 			  int uci_elo = (Options["UCI_Elo"]);
 			  
-			  uci_elo += rand() % (33 - -33 );
+			  std::mt19937 gen(now());
+			  std::uniform_int_distribution<int> dis(-33, 33);
+			  int rand = dis(gen);
+			  uci_elo += rand;
 			  int NodesToSearch   = pow(1.005958946,(((uci_elo)/1500) - 1 )
 								  + (uci_elo - 1500)) * 32 ;
 			  Limits.nodes = NodesToSearch;
@@ -826,6 +831,7 @@ namespace {
 		  if (   !bruteForce
 			  && !PvNode
 			  &&  depth < 4 * ONE_PLY
+			  &&  pos.non_pawn_material(pos.side_to_move()) > BishopValueEg
 			  &&  eval + razor_margin[depth / ONE_PLY] <= alpha
 			  &&  abs(eval) < 2 * VALUE_KNOWN_WIN)
 		  {
@@ -845,6 +851,7 @@ namespace {
 		if (    !bruteForce
 			&&  !PvNode
 			&&  depth < 4 * ONE_PLY
+			&&  pos.non_pawn_material(pos.side_to_move()) > BishopValueEg
 			&&  eval + razor_margin[depth / ONE_PLY] <= alpha)
 		{
 			if (depth <= ONE_PLY)
@@ -864,9 +871,9 @@ namespace {
 			  && !PvNode
 			  &&  depth < 7 * ONE_PLY
 			  &&  eval - futility_margin(depth) >= beta
-			  &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
+			  &&  abs(eval) < VALUE_MATE_IN_MAX_PLY // Do not return unproven wins
 			  &&  pos.non_pawn_material(pos.side_to_move())
-			  &&  pos.non_pawn_material(~pos.side_to_move()))
+			  &&  pos.non_pawn_material(pos.side_to_move()))
 			  return eval;
 	    }
 	    else
@@ -876,7 +883,7 @@ namespace {
 			  &&  !rootNode
 			  &&  depth < 7 * ONE_PLY
 			  &&  eval - futility_margin(depth) >= beta
-			  &&  eval < VALUE_KNOWN_WIN  // Do not return unproven wins
+			  &&  abs(eval) < VALUE_MATE_IN_MAX_PLY  // Do not return unproven wins
 			  &&  pos.non_pawn_material(pos.side_to_move()))
 			  return eval;
 	     }
@@ -887,10 +894,10 @@ namespace {
 			  && !PvNode
 			  &&  eval >= beta
 			  && (ss->staticEval >= beta - 35 * (depth / ONE_PLY - 6) || depth >= 13 * ONE_PLY)
-			  &&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth // helps with this 1q2k3/1Pp1Pp1K/2P2B2/8/8/8/8/8 w - - 5 1
+			  &&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth
 			  &&  abs(eval) < 2 * VALUE_KNOWN_WIN
-			  &&  pos.non_pawn_material(pos.side_to_move())
-			  &&  pos.non_pawn_material(~pos.side_to_move())
+			  &&  ((ss-2)->currentMove != MOVE_NULL || pos.non_pawn_material(pos.side_to_move()) > BishopValueEg)
+			  &&  pos.non_pawn_material(~pos.side_to_move()) 
 			  && !(depth > 4 * ONE_PLY && (MoveList<LEGAL, KING>(pos).size() < 1 || MoveList<LEGAL>(pos).size() < 6)))
 		  {
 			  
@@ -916,6 +923,9 @@ namespace {
 				  if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN)
 					  return nullValue;
 				  
+				  if (pos.non_pawn_material(pos.side_to_move()) <= BishopValueEg)
+				  R =  std::min(R/2, 3 * ONE_PLY);
+				  
 				  // Do verification search at high depths
 				  Value v = depth-R < ONE_PLY ? qsearch<NonPV, false>(pos, ss, beta-1, beta)
 				  :  search<NonPV>(pos, ss, beta-1, beta, depth-R, false, true);
@@ -932,8 +942,8 @@ namespace {
 			&& !PvNode
 			&&  eval >= beta
 			&& (ss->staticEval >= beta - 35 * (depth / ONE_PLY - 6) || depth >= 13 * ONE_PLY)
-			&&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth // helps with this 1q2k3/1Pp1Pp1K/2P2B2/8/8/8/8/8 w - - 5 1
-			&&  pos.non_pawn_material(pos.side_to_move()))
+			&&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth
+			&&  ((ss-2)->currentMove != MOVE_NULL || pos.non_pawn_material(pos.side_to_move()) > BishopValueEg))
 		{
 
 			assert(eval - beta >= 0);
@@ -957,6 +967,9 @@ namespace {
 
 				if (depth < 12 * ONE_PLY && abs(beta) < VALUE_KNOWN_WIN)
 					return nullValue;
+				
+				if (pos.non_pawn_material(pos.side_to_move()) <= BishopValueEg)
+				R =  std::min(R/2, 3 * ONE_PLY);
 
 				// Do verification search at high depths
 				Value v = depth-R < ONE_PLY ? qsearch<NonPV, false>(pos, ss, beta-1, beta)
@@ -1372,7 +1385,16 @@ moves_loop: // When in check search starts from here
               // move position in the list is preserved - just the PV is pushed up.
               rm.score = -VALUE_INFINITE;
       }
-
+		
+	  //Add a little variety to play
+      if (variety && value + (variety * 5 * PawnValueEg / 100) >= 0 )
+		{
+		  std::mt19937 gen(now());
+		  std::uniform_int_distribution<int> dis(-variety , variety);
+		  int rand2 = 5 * dis(gen);
+		  value += rand2;
+		}
+		
       if (value > bestValue)
       {
           bestValue = value;
@@ -1588,6 +1610,7 @@ moves_loop: // When in check search starts from here
       // Detect non-capture evasions that are candidates to be pruned
       evasionPrunable =    InCheck
                        &&  (depth != DEPTH_ZERO || moveCount > 2)
+					   &&  pos.non_pawn_material(pos.side_to_move()) > BishopValueEg
                        &&  bestValue > VALUE_MATED_IN_MAX_PLY
                        && !pos.capture(move);
 
@@ -1618,8 +1641,13 @@ moves_loop: // When in check search starts from here
       assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
 
 	  //Add a little variety to play
-      if (variety && value + (variety * 5 * PawnValueEg / 100) >= 0 )
-		  value += rand() % (variety * 5);
+		if (variety && value + (variety * 3 * PawnValueEg / 100) >= 0 )
+		{
+		  std::mt19937 gen(now());
+		  std::uniform_int_distribution<int> dis(-variety , variety);
+		  int rand2 = 3 * dis(gen);
+		  value += rand2;
+		}
 		
 	  // Check for a new best move
       if (value > bestValue)
