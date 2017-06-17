@@ -393,12 +393,11 @@ namespace {
   Score evaluate_king(const Position& pos, const EvalInfo& ei) {
 
     const Color Them    = (Us == WHITE ? BLACK : WHITE);
-    const Square Up     = (Us == WHITE ? NORTH : SOUTH);
     const Bitboard Camp = (Us == WHITE ? ~Bitboard(0) ^ Rank6BB ^ Rank7BB ^ Rank8BB
                                        : ~Bitboard(0) ^ Rank1BB ^ Rank2BB ^ Rank3BB);
 
     const Square ksq = pos.square<KING>(Us);
-    Bitboard undefended, b, b1, b2, safe, other;
+    Bitboard undefended, b, b1, b2, safe, other, otherThreats;
     int kingDanger;
 
     // King shelter and enemy pawns storm
@@ -427,7 +426,7 @@ namespace {
                     + 143 * (popcount(b) + !!pos.pinned_pieces(Us))
                     - 848 * !pos.count<QUEEN>(Them)
                     -   9 * mg_value(score) / 8
-					+  40;
+                    +  40;
 
         // Analyse the safe enemy's checks which are possible on next move
         safe  = ~pos.pieces(Them);
@@ -449,30 +448,21 @@ namespace {
         // Some other potential checks are also analysed, even from squares
         // currently occupied by the opponent own pieces, as long as the square
         // is not attacked by our pawns, and is not occupied by a blocked pawn.
-        other = ~(   ei.attackedBy[Us][PAWN]
-                  | (pos.pieces(Them, PAWN) & shift<Up>(pos.pieces(PAWN))));
+        other = ~(ei.attackedBy[Us][PAWN] | pos.pieces(Them, ALL_PIECES));
 
-        // Enemy rooks safe and other checks
-        if (b1 & ei.attackedBy[Them][ROOK] & safe)
-            kingDanger += RookCheck;
-
-        else if (b1 & ei.attackedBy[Them][ROOK] & other)
-            score -= OtherCheck;
-
-        // Enemy bishops safe and other checks
-        if (b2 & ei.attackedBy[Them][BISHOP] & safe)
-            kingDanger += BishopCheck;
-
-        else if (b2 & ei.attackedBy[Them][BISHOP] & other)
-            score -= OtherCheck;
-
-        // Enemy knights safe and other checks
         b = pos.attacks_from<KNIGHT>(ksq) & ei.attackedBy[Them][KNIGHT];
-        if (b & safe)
-            kingDanger += KnightCheck;
 
-        else if (b & other)
-            score -= OtherCheck;
+        bool rcb  = b1 & ei.attackedBy[Them][ROOK] & safe;
+        bool bcb  = b2 & ei.attackedBy[Them][BISHOP] & safe;
+        bool kcb  = b & safe;
+
+        kingDanger += rcb * RookCheck;
+        kingDanger += bcb * BishopCheck;
+        kingDanger += kcb * KnightCheck;
+
+        otherThreats = (b1 & ei.attackedBy[Them][ROOK]) | (b2 & ei.attackedBy[Them][BISHOP]) | b;
+
+        score -= OtherCheck * popcount(otherThreats & other);
 
         // Transform the kingDanger units into a Score, and substract it from the evaluation
         if (kingDanger > 0)

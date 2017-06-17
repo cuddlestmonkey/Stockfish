@@ -146,9 +146,9 @@ namespace {
   EasyMoveManager EasyMove;
   Value DrawValue[COLOR_NB];
 	
-  int respect, tactical, variety;
+  int respect, tactical;
 	
-  bool bruteForce, findMate, futility, limitStrength, noNULL, showInfo;
+  bool bruteForce, findMate, futility, limitStrength, noNULL;
 
   template <NodeType NT>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode, bool skipEarlyPruning);
@@ -164,36 +164,6 @@ namespace {
   void check_time();
 
 } // namespace
-
-
-/// Search::init() is called during startup to initialize various lookup tables
-
-void Search::init() {
-	
-  double threadcount;
-  threadcount = Options["Threads"];
-
-  for (int imp = 0; imp <= 1; ++imp)
-      for (int d = 1; d < 64; ++d)
-          for (int mc = 1; mc < 64; ++mc)
-          {
-              double r = log(d) * log(mc) * log(1.65 + threadcount/50);
-
-              Reductions[NonPV][imp][d][mc] = int(std::round(r));
-              Reductions[PV][imp][d][mc] = std::max(Reductions[NonPV][imp][d][mc] - 1, 0);
-
-              // Increase reduction for non-PV nodes when eval is not improving
-              if (!imp && Reductions[NonPV][imp][d][mc] >= 2)
-                Reductions[NonPV][imp][d][mc]++;
-          }
-
-  for (int d = 0; d < 16; ++d)
-  {
-      FutilityMoveCounts[0][d] = int(2.4 + 0.74 * pow(d, 1.78));
-      FutilityMoveCounts[1][d] = int(5.0 + 1.00 * pow(d, 2.00));
-  }
-}
-
 
 /// Search::clear() resets search state to its initial value, to obtain reproducible results
 
@@ -252,16 +222,39 @@ template uint64_t Search::perft<true>(Position&, Depth);
 
 void MainThread::search() {
 	
+	double threadcount;
+	threadcount = Options["Threads"];
+	
+	for (int imp = 0; imp <= 1; ++imp)
+		for (int d = 1; d < 64; ++d)
+			for (int mc = 1; mc < 64; ++mc)
+			{
+				//double r = log(d) * log(mc) / 1.95;
+				double r = log(d) * log(mc) * log(1.65 + threadcount/50);
+				
+				Reductions[NonPV][imp][d][mc] = int(std::round(r));
+				Reductions[PV][imp][d][mc] = std::max(Reductions[NonPV][imp][d][mc] - 1, 0);
+				
+				// Increase reduction for non-PV nodes when eval is not improving
+				if (!imp && Reductions[NonPV][imp][d][mc] >= 2)
+					Reductions[NonPV][imp][d][mc]++;
+			}
+	
+	for (int d = 0; d < 16; ++d)
+	{
+		FutilityMoveCounts[0][d] = int(2.4 + 0.74 * pow(d, 1.78));
+		FutilityMoveCounts[1][d] = int(5.0 + 1.00 * pow(d, 2.00));
+	}
+
+	
   // Read search options
   bruteForce	  = Options["BruteForce"];
   findMate	      = Options["MateFinder"];
   futility	      = Options["Futility"];
   limitStrength   = Options["UCI_LimitStrength"];
   noNULL	      = Options["No_Null_Moves"];
-  showInfo	      = Options["ShowInfo"];
   respect		  = Options["Respect"] * PawnValueEg / 100; // From centipawns
   tactical	      = Options["Tactical"];
-  variety		  = Options["Variety"];
 
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
@@ -898,7 +891,8 @@ namespace {
 			  &&  abs(eval) < 2 * VALUE_KNOWN_WIN
 			  &&  ((ss-2)->currentMove != MOVE_NULL || pos.non_pawn_material(pos.side_to_move()) > BishopValueEg)
 			  &&  pos.non_pawn_material(~pos.side_to_move()) 
-			  && !(depth > 4 * ONE_PLY && (MoveList<LEGAL, KING>(pos).size() < 1 || MoveList<LEGAL>(pos).size() < 6)))
+			  && !(depth > 4 * ONE_PLY && (MoveList<LEGAL, KING>(pos).size() < 1 || MoveList<LEGAL>(pos).size() < 6))
+			  &&  (ss-1)->moveCount > 0)
 		  {
 			  
 			  assert(eval - beta >= 0);
@@ -943,7 +937,8 @@ namespace {
 			&&  eval >= beta
 			&& (ss->staticEval >= beta - 35 * (depth / ONE_PLY - 6) || depth >= 13 * ONE_PLY)
 			&&  thisThread->maxPly + 3 * ONE_PLY > thisThread->rootDepth
-			&&  ((ss-2)->currentMove != MOVE_NULL || pos.non_pawn_material(pos.side_to_move()) > BishopValueEg))
+			&&  ((ss-2)->currentMove != MOVE_NULL || pos.non_pawn_material(pos.side_to_move()) > BishopValueEg)
+			&&  (ss-1)->moveCount > 0)
 		{
 
 			assert(eval - beta >= 0);
@@ -1099,7 +1094,7 @@ moves_loop: // When in check search starts from here
 
       ss->moveCount = ++moveCount;
 
-      if (showInfo && rootNode && thisThread == Threads.main() && Time.elapsed() > 3000)
+      if ( rootNode && thisThread == Threads.main() && Time.elapsed() > 3000)
           sync_cout << "info depth " << depth / ONE_PLY
                     << " currmove " << UCI::move(move, pos.is_chess960())
                     << " currmovenumber " << moveCount + thisThread->PVIdx << sync_endl;
@@ -1386,15 +1381,6 @@ moves_loop: // When in check search starts from here
               rm.score = -VALUE_INFINITE;
       }
 		
-	  //Add a little variety to play
-      if (variety && value + (variety * 5 * PawnValueEg / 100) >= 0 )
-		{
-		  std::mt19937 gen(now());
-		  std::uniform_int_distribution<int> dis(-variety , variety);
-		  int rand2 = 5 * dis(gen);
-		  value += rand2;
-		}
-		
       if (value > bestValue)
       {
           bestValue = value;
@@ -1639,15 +1625,6 @@ moves_loop: // When in check search starts from here
       pos.undo_move(move);
 
       assert(value > -VALUE_INFINITE && value < VALUE_INFINITE);
-
-	  //Add a little variety to play
-		if (variety && value + (variety * 3 * PawnValueEg / 100) >= 0 )
-		{
-		  std::mt19937 gen(now());
-		  std::uniform_int_distribution<int> dis(-variety , variety);
-		  int rand2 = 3 * dis(gen);
-		  value += rand2;
-		}
 		
 	  // Check for a new best move
       if (value > bestValue)
@@ -1864,7 +1841,7 @@ string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
          << " multipv "  << i + 1
          << " score "    << UCI::value(v);
 
-      if (showInfo && !tb && i == PVIdx)
+      if (!tb && i == PVIdx)
           ss << (v >= beta ? " lowerbound" : v <= alpha ? " upperbound" : "");
 
       ss << " nodes "    << nodesSearched

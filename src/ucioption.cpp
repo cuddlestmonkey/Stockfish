@@ -71,8 +71,7 @@ void init(OptionsMap& o) {
 	o["MateFinder"]            << Option(false);
 	o["No_Null_Moves"]         << Option(false);
 	o["UCI_Limit_Strength"]    << Option(false);
-	o["UCI_ELO"]               << Option(1500, 1500, 2900);
-	o["Variety"]               << Option(0, 0, 8);
+	o["UCI_ELO"]               << Option(1500, 1500, 2800);
 	o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
 	o["BookPath"]              << Option("<empty>", on_brainbook_path);
 	o["Respect"]               << Option(0, -100, 100);
@@ -90,7 +89,6 @@ void init(OptionsMap& o) {
 	o["Syzygy50MoveRule"]      << Option(true);
 	o["SyzygyProbeLimit"]      << Option(6, 0, 6);
 	o["Debug Log File"]        << Option("", on_logger);
-	o["ShowInfo"]              << Option(false);
 }
 
 
