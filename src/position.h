@@ -137,7 +137,7 @@ public:
   void undo_null_move();
 
   // Static Exchange Evaluation
-  bool see_ge(Move m, Value value = VALUE_ZERO) const;
+  bool see_ge(Move m, Value threshold = VALUE_ZERO) const;
 
   // Accessing hash keys
   Key key() const;
@@ -159,7 +159,7 @@ public:
   Value non_pawn_material() const;
 
   // Position consistency check, for debugging
-  bool pos_is_ok(int* failedStep = nullptr) const;
+  bool pos_is_ok() const;
   void flip();
 
 private:
@@ -356,7 +356,7 @@ inline int Position::rule50_count() const {
 }
 
 inline uint64_t Position::nodes_searched() const {
-  return nodes;
+	return nodes;
 }
 
 inline bool Position::opposite_bishops() const {

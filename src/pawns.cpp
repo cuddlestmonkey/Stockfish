@@ -52,56 +52,35 @@ namespace {
     S(17, 16), S(33, 32), S(0, 0), S(0, 0)
   };
 
-  // Weakness of our pawn shelter in front of the king by [notKingFile/kingFile][distance from edge][rank].
+  // Weakness of our pawn shelter in front of the king by [distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawns or our pawn is behind our king.
-  Value ShelterWeakness[][4][RANK_NB] = {
-   { { V(100), V(21), V(18), V(40), V( 83), V( 96), V(106) },
-     { V(104), V( 4), V(29), V(75), V( 99), V(116), V( 98) },
-     { V( 96), V(-4), V(59), V(84), V( 63), V( 94), V(116) },
-     { V( 71), V(23), V(47), V(65), V( 84), V( 85), V(119) } },
-   { { V( 96), V(10), V(-1), V(43), V( 84), V( 89), V(100) },
-     { V(118), V(-5), V(29), V(82), V(101), V(113), V( 96) },
-     { V(116), V( 4), V(59), V(87), V( 65), V(100), V(113) },
-     { V( 67), V(11), V(41), V(54), V( 86), V( 83), V(119) } }
+  const Value ShelterWeakness[][RANK_NB] = {
+    { V(100), V(20), V(10), V(46), V(82), V( 86), V( 98) },
+    { V(116), V( 4), V(28), V(87), V(94), V(108), V(104) },
+    { V(109), V( 1), V(59), V(87), V(62), V( 91), V(116) },
+    { V( 75), V(12), V(43), V(59), V(90), V( 84), V(112) }
   };
 
-  // Danger of enemy pawns moving toward our king by [type][notKingFile/kingFile][distance from edge][rank].
+  // Danger of enemy pawns moving toward our king by [type][distance from edge][rank].
   // For the unopposed and unblocked cases, RANK_1 = 0 is used when opponent has no pawn
   // on the given file, or their pawn is behind our king.
-  Value StormDanger[][2][4][RANK_NB] = {
-   { //BlockedByKing
-     {}, // this values are not used because the king is in this case on the file
-     { { V( 0),  V(-280), V(-274), V(50), V( 40) },
-       { V( 0),  V(  63), V( 146), V(30), V( 13) },
-       { V( 0),  V(  60), V( 148), V(44), V( 23) },
-       { V( 0),  V(  61), V( 123), V(46), V( 11) } } },
-   {  //Unopposed
-     { { V(-3),  V(  77), V( 132), V(39), V( 22) },
-       { V( 7),  V(  68), V( 146), V(35), V( 11) },
-       { V(11),  V(  42), V( 111), V(48), V( 29) },
-       { V(-8),  V(  70), V( 130), V(48), V( 42) } },
-     { { V(-5),  V(  77), V( 138), V(52), V( 32) },
-       { V(-3),  V(  71), V( 149), V(40), V(  9) },
-       { V( 8),  V(  51), V( 123), V(37), V( 28) },
-       { V( 6),  V(  73), V( 132), V(48), V( 37) } } },
-   { //BlockedByPawn
-     { { V( 0),  V(   0), V(  71), V(18), V(  4) },
-       { V( 0),  V(   0), V( 154), V(21), V( -4) },
-       { V( 0),  V(   0), V( 169), V(20), V( -7) },
-       { V( 0),  V(   0), V( 169), V(14), V( 13) } },
-     { { V( 0),  V(   0), V(  76), V(22), V( 13) },
-       { V( 0),  V(   0), V( 151), V(31), V(  5) },
-       { V( 0),  V(   0), V( 156), V(15), V(  2) },
-       { V( 0),  V(   0), V( 172), V(32), V( 19) } } },
-   { //Unblocked
-     { { V(29),  V(  47), V( 110), V(55), V( -6) },
-       { V(39),  V(  24), V( 107), V(53), V( 17) },
-       { V(21),  V(  37), V(  93), V(49), V( 17) },
-       { V(22),  V(  25), V( 115), V(50), V(  0) } },
-     { { V(17),  V(  43), V(  91), V(61), V(  3) },
-       { V(30),  V(  37), V(  94), V(45), V( 16) },
-       { V(27),  V(  35), V( 101), V(43), V( 18) },
-       { V(20),  V(  16), V( 133), V(35), V( 16) } } }
+  const Value StormDanger[][4][RANK_NB] = {
+    { { V( 0),  V(-290), V(-274), V(57), V(41) },  //BlockedByKing
+      { V( 0),  V(  60), V( 144), V(39), V(13) },
+      { V( 0),  V(  65), V( 141), V(41), V(34) },
+      { V( 0),  V(  53), V( 127), V(56), V(14) } },
+    { { V( 4),  V(  73), V( 132), V(46), V(31) },  //Unopposed
+      { V( 1),  V(  64), V( 143), V(26), V(13) },
+      { V( 1),  V(  47), V( 110), V(44), V(24) },
+      { V( 0),  V(  72), V( 127), V(50), V(31) } },
+    { { V( 0),  V(   0), V(  79), V(23), V( 1) },  //BlockedByPawn
+      { V( 0),  V(   0), V( 148), V(27), V( 2) },
+      { V( 0),  V(   0), V( 161), V(16), V( 1) },
+      { V( 0),  V(   0), V( 171), V(22), V(15) } },
+    { { V(22),  V(  45), V( 104), V(62), V( 6) },  //Unblocked
+      { V(31),  V(  30), V(  99), V(39), V(19) },
+      { V(23),  V(  29), V(  96), V(41), V(15) },
+      { V(21),  V(  23), V( 116), V(41), V(15) } }
   };
 
   // Max bonus for king safety. Corresponds to start position with all the pawns
@@ -126,7 +105,7 @@ namespace {
     Score score = SCORE_ZERO;
     const Square* pl = pos.squares<PAWN>(Us);
 
-    Bitboard ourPawns   = pos.pieces(Us  , PAWN);
+    Bitboard ourPawns   = pos.pieces(  Us, PAWN);
     Bitboard theirPawns = pos.pieces(Them, PAWN);
 
     e->passedPawns[Us]   = e->pawnAttacksSpan[Us] = 0;
@@ -286,12 +265,12 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
       Rank rkThem = b ? relative_rank(Us, frontmost_sq(Them, b)) : RANK_1;
 
       int d = std::min(f, FILE_H - f);
-      safety -=  ShelterWeakness[f == file_of(ksq)][d][rkUs]
+      safety -=  ShelterWeakness[d][rkUs]
                + StormDanger
                  [f == file_of(ksq) && rkThem == relative_rank(Us, ksq) + 1 ? BlockedByKing  :
                   rkUs   == RANK_1                                          ? Unopposed :
                   rkThem == rkUs + 1                                        ? BlockedByPawn  : Unblocked]
-                 [f == file_of(ksq)][d][rkThem];
+                 [d][rkThem];
   }
 
   return safety;
