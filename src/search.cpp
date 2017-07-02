@@ -85,7 +85,7 @@ namespace {
 
   // History and stats update bonus, based on depth
   int stat_bonus(Depth depth) {
-    int d = depth / ONE_PLY ;
+    int d = depth / ONE_PLY;
     return d > 17 ? 0 : d * d + 2 * d - 2;
   }
 
@@ -154,7 +154,6 @@ namespace {
   void update_pv(Move* pv, Move move, Move* childPv);
   void update_cm_stats(Stack* ss, Piece pc, Square s, int bonus);
   void update_stats(const Position& pos, Stack* ss, Move move, Move* quiets, int quietsCnt, int bonus);
-  void check_time();
 
 } // namespace
 
@@ -193,7 +192,6 @@ void Search::clear() {
 
   for (Thread* th : Threads)
   {
-      th->resetCalls = true;
       th->counterMoves.fill(MOVE_NONE);
       th->history.fill(0);
 
@@ -204,6 +202,7 @@ void Search::clear() {
       th->counterMoveHistory[NO_PIECE][0].fill(CounterMovePruneThreshold - 1);
   }
 
+  Threads.main()->callsCnt = 0;
   Threads.main()->previousScore = VALUE_INFINITE;
 }
 
@@ -244,6 +243,7 @@ void MainThread::search() {
 
   Color us = rootPos.side_to_move();
   Time.init(Limits, us, rootPos.game_ply());
+  TT.new_search();
 
   int contempt = Options["Contempt"] * PawnValueEg / 100; // From centipawns
   DrawValue[ us] = VALUE_DRAW - Value(contempt);
@@ -334,7 +334,7 @@ void Thread::search() {
   MainThread* mainThread = (this == Threads.main() ? Threads.main() : nullptr);
 
   std::memset(ss-4, 0, 7 * sizeof(Stack));
-  for(int i = 4; i > 0; i--)
+  for (int i = 4; i > 0; i--)
      (ss-i)->history = &this->counterMoveHistory[NO_PIECE][0]; // Use as sentinel
 
   bestValue = delta = alpha = -VALUE_INFINITE;
@@ -347,7 +347,6 @@ void Thread::search() {
       EasyMove.clear();
       mainThread->easyMovePlayed = mainThread->failedLow = false;
       mainThread->bestMoveChanges = 0;
-      TT.new_search();
   }
 
   size_t multiPV = Options["MultiPV"];
@@ -361,7 +360,7 @@ void Thread::search() {
   multiPV = std::min(multiPV, rootMoves.size());
 
   // Iterative deepening loop until requested to stop or the target depth is reached
-  while (   (rootDepth += ONE_PLY) < DEPTH_MAX
+  while (   (rootDepth = rootDepth + ONE_PLY) < DEPTH_MAX
          && !Signals.stop
          && (!Limits.depth || Threads.main()->rootDepth / ONE_PLY <= Limits.depth))
   {
@@ -551,7 +550,7 @@ namespace {
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval;
     bool ttHit, inCheck, givesCheck, singularExtensionNode, improving;
-    bool captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets;
+    bool captureOrPromotion, doFullDepthSearch, moveCountPruning, skipQuiets, ttCapture;
     Piece moved_piece;
     int moveCount, quietCount;
 
@@ -564,23 +563,8 @@ namespace {
     ss->ply = (ss-1)->ply + 1;
 
     // Check for the available remaining time
-    if (thisThread->resetCalls.load(std::memory_order_relaxed))
-    {
-        thisThread->resetCalls = false;
-
-        // At low node count increase the checking rate to about 0.1% of nodes
-        // otherwise use a default value.
-        thisThread->callsCnt = Limits.nodes ? std::min(4096, int(Limits.nodes / 1024))
-                                            : 4096;
-    }
-
-    if (--thisThread->callsCnt <= 0)
-    {
-        for (Thread* th : Threads)
-            th->resetCalls = true;
-
-        check_time();
-    }
+    if (thisThread == Threads.main())
+        static_cast<MainThread*>(thisThread)->check_time();
 
     // Used to send selDepth info to GUI
     if (PvNode && thisThread->maxPly < ss->ply)
@@ -668,7 +652,7 @@ namespace {
 
             if (err != TB::ProbeState::FAIL)
             {
-                thisThread->tbHits++;
+                thisThread->tbHits.fetch_add(1, std::memory_order_relaxed);
 
                 int drawScore = TB::UseRule50 ? 1 : 0;
 
@@ -784,9 +768,7 @@ namespace {
         &&  abs(beta) < VALUE_MATE_IN_MAX_PLY)
     {
         Value rbeta = std::min(beta + 200, VALUE_INFINITE);
-        Depth rdepth = depth - 4 * ONE_PLY;
 
-        assert(rdepth >= ONE_PLY);
         assert(is_ok((ss-1)->currentMove));
 
         MovePicker mp(pos, ttMove, rbeta - ss->staticEval);
@@ -797,8 +779,9 @@ namespace {
                 ss->currentMove = move;
                 ss->history = &thisThread->counterMoveHistory[pos.moved_piece(move)][to_sq(move)];
 
+                assert(depth >= 5 * ONE_PLY);
                 pos.do_move(move, st);
-                value = -search<NonPV>(pos, ss+1, -rbeta, -rbeta+1, rdepth, !cutNode, false);
+                value = -search<NonPV>(pos, ss+1, -rbeta, -rbeta+1, depth - 4 * ONE_PLY, !cutNode, false);
                 pos.undo_move(move);
                 if (value >= rbeta)
                     return value;
@@ -837,6 +820,7 @@ moves_loop: // When in check search starts from here
                            && (tte->bound() & BOUND_LOWER)
                            &&  tte->depth() >= depth - 3 * ONE_PLY;
     skipQuiets = false;
+    ttCapture = false;
 
     // Step 11. Loop through moves
     // Loop through all pseudo-legal moves until no moves remain or a beta cutoff occurs
@@ -955,6 +939,9 @@ moves_loop: // When in check search starts from here
           continue;
       }
 
+      if (move == ttMove && captureOrPromotion)
+          ttCapture = true;
+
       // Update the current move (this must be done after singular extension search)
       ss->currentMove = move;
       ss->history = &thisThread->counterMoveHistory[moved_piece][to_sq(move)];
@@ -974,6 +961,10 @@ moves_loop: // When in check search starts from here
               r -= r ? ONE_PLY : DEPTH_ZERO;
           else
           {
+              // Increase reduction if ttMove is a capture
+              if (ttCapture)
+                  r += ONE_PLY;
+
               // Increase reduction for cut nodes
               if (cutNode)
                   r += 2 * ONE_PLY;
@@ -1468,11 +1459,19 @@ moves_loop: // When in check search starts from here
     return best;
   }
 
+} // namespace
 
   // check_time() is used to print debug info and, more importantly, to detect
   // when we are out of available time and thus stop the search.
 
-  void check_time() {
+  void MainThread::check_time() {
+
+    if (--callsCnt > 0)
+        return;
+
+    // At low node count increase the checking rate to about 0.1% of nodes
+    // otherwise use a default value.
+    callsCnt = Limits.nodes ? std::min(4096, int(Limits.nodes / 1024)) : 4096;
 
     static TimePoint lastInfoTime = now();
 
@@ -1494,8 +1493,6 @@ moves_loop: // When in check search starts from here
         || (Limits.nodes && Threads.nodes_searched() >= (uint64_t)Limits.nodes))
             Signals.stop = true;
   }
-
-} // namespace
 
 
 /// UCI::pv() formats PV information according to the UCI protocol. UCI requires
