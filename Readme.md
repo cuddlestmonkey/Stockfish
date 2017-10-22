@@ -1,26 +1,22 @@
 ### Overview
 
-[![Build Status](https://travis-ci.org/official-stockfish/Stockfish.svg?branch=master)](https://travis-ci.org/official-stockfish/Stockfish)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/official-stockfish/Stockfish?svg=true)](https://ci.appveyor.com/project/mcostalba/stockfish)
-
-Stockfish is a free UCI chess engine derived from Glaurung 2.1. It is
+McBrain, a UCI chess playing engine derived from Stockfish and Glaurung 2.1. It is
 not a complete chess program and requires some UCI-compatible GUI
 (e.g. XBoard with PolyGlot, eboard, Arena, Sigma Chess, Shredder, Chess
 Partner or Fritz) in order to be used comfortably. Read the
 documentation for your GUI of choice for information about how to use
-Stockfish with it.
+McBrain with it.
 
-This version of Stockfish supports up to 512 cores. The engine defaults
+This version of McBrain supports up to 512 cores. The engine defaults
 to one search thread, so it is therefore recommended to inspect the value of
 the *Threads* UCI parameter, and to make sure it equals the number of CPU
 cores on your computer.
 
-This version of Stockfish has support for Syzygybases.
-
+This McBrain has support for Syzygybases by Ronald De Man and the Cerebellum book by Thomas Zipproth.
 
 ### Files
 
-This distribution of Stockfish consists of the following files:
+This distribution of McBrain consists of the following files:
 
   * Readme.md, the file you are currently reading.
 
@@ -28,7 +24,6 @@ This distribution of Stockfish consists of the following files:
 
   * src, a subdirectory containing the full source code, including a Makefile
     that can be used to compile Stockfish on Unix-like systems.
-
 
 ### Syzygybases
 
@@ -84,7 +79,7 @@ the 50-move rule.
 
 ### Compiling it yourself
 
-On Unix-like systems, it should be possible to compile Stockfish
+On Unix-like systems, it should be possible to compile McBrain
 directly from the source code with the included Makefile.
 
 Stockfish has support for 32 or 64-bit CPUs, the hardware POPCNT
@@ -99,14 +94,14 @@ for a quick reference.
 
 ### Terms of use
 
-Stockfish is free, and distributed under the **GNU General Public License**
+McBrain is free, and distributed under the **GNU General Public License**
 (GPL). Essentially, this means that you are free to do almost exactly
 what you want with the program, including distributing it among your
 friends, making it available for download from your web site, selling
 it (either by itself or as part of some bigger software package), or
 using it as the starting point for a software project of your own.
 
-The only real limitation is that whenever you distribute Stockfish in
+The only real limitation is that whenever you distribute McBrain in
 some way, you must always include the full source code, or a pointer
 to where the source code can be found. If you make any changes to the
 source code, these changes must also be made available under the GPL.
