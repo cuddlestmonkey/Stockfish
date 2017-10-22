@@ -1,22 +1,23 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
-  Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-  Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
-
-  Stockfish is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  Stockfish is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ McBrain, a UCI chess playing engine derived from Stockfish and Glaurung 2.1
+ Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
+ Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad (Stockfish Authors)
+ Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad (Stockfish Authors)
+ Copyright (C) 2017 Michael Byrne, Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad (McBrain Authors)
+ 
+ McBrain is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ McBrain is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <algorithm>
 #include <cassert>
@@ -26,9 +27,9 @@
 #include "search.h"
 #include "thread.h"
 #include "tt.h"
-#include "tzbook.h"
 #include "uci.h"
 #include "tbprobe.h"
+#include "tzbook.h"
 
 using std::string;
 
@@ -64,8 +65,8 @@ void init(OptionsMap& o) {
   o["Ponder"]                << Option(false);
   o["Threads"]               << Option(1, 1, 512, on_threads);
 
-  o["Clear Hash"]            << Option(on_clear_hash);
-  o["Clean Search"]          << Option(false);
+  o["Clear_Hash"]            << Option(on_clear_hash);
+  o["Clean_Search"]          << Option(false);
   o["BruteForce"]            << Option(false);
   o["FastPlay"]              << Option(false);
   o["No_Null_Moves"]         << Option(false);
@@ -74,19 +75,19 @@ void init(OptionsMap& o) {
   o["Book Move2 Probability"]<< Option(0, 0, 100, on_book_move2_prob);
   o["BookPath"]              << Option("<empty>", on_brainbook_path);
   o["Respect"]               << Option(0, -300, 300);
-  o["Respect White POV"]     << Option(0, -300, 300);
+  o["White_Respect"]         << Option(0, -300, 300);
   o["Tactical"]              << Option(0, 0,  8);
 
   o["MultiPV"]               << Option(1, 1, 500);
   o["Skill Level"]           << Option(20, 0, 20);
-  o["Move Overhead"]         << Option(60, 0, 5000);
+  o["Move Overhead"]         << Option(100, 0, 5000);
   o["nodestime"]             << Option(0, 0, 10000);
   o["UCI_Chess960"]          << Option(false);
   o["SyzygyPath"]            << Option("<empty>", on_tb_path);
   o["SyzygyProbeDepth"]      << Option(1, 1, 100);
   o["Syzygy50MoveRule"]      << Option(true);
   o["SyzygyProbeLimit"]      << Option(6, 0, 6);
-  o["Debug Log File"]        << Option("", on_logger);
+  o["Debug"]                  << Option("", on_logger);
 }
 
 
