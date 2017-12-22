@@ -28,7 +28,7 @@
 #include "tt.h"
 #include "uci.h"
 #include "tbprobe.h"
-#include "tzbook.h"
+#include "polybook.h"
 
 namespace PSQT {
   void init();
@@ -45,10 +45,10 @@ int main(int argc, char* argv[]) {
   Bitbases::init();
   Search::init();
   Pawns::init();
+  polybook.init(Options["BookFile"]);
   Tablebases::init(Options["SyzygyPath"]);
   TT.resize(Options["Hash"]);
   Threads.init(Options["Threads"]);
-  tzbook.init(Options["BookPath"]);
   Search::clear(); // After threads are up
 
   UCI::loop(argc, argv);

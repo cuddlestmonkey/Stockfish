@@ -1394,7 +1394,7 @@ void Tablebases::init(const std::string& paths) {
         }
     }
 
-	sync_cout << "Info string: found " << EntryTable.size() << " tablebases" << sync_endl;
+    sync_cout << "Info string found: " << EntryTable.size() << " tablebases" << sync_endl;
 }
 
 // Probe the WDL table for a particular position.

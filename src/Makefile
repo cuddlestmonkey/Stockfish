@@ -1,22 +1,24 @@
-# Stockfish, a UCI chess playing engine derived from Glaurung 2.1
-# Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
-# Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-# Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
-#
-# Stockfish is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Stockfish is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+### ==========================================================================
+### Copyright Notice and License Information
+### ==========================================================================
+#   McBrain, a UCI chess playing engine derived from Stockfish and Glaurung 2.1
+#   Copyright (C) 2004-2008 Tord Romstad (Glaurung Author)
+#   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad (Stockfish Authors)
+#   Copyright (C) 2015-2016 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad (Stockfish Authors)
+#   Copyright (C) 2017 Michael Byrne, Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad (McBrain Authors)
 
+#   McBrain is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
 
+#   McBrain is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ### ==========================================================================
 ### Section 1. General Configuration
 ### ==========================================================================
@@ -28,8 +30,8 @@ ifeq ($(KERNEL),Linux)
 endif
 
 ### Executable name
-EXE = McBrain_2017_v30_TCEC-X
-# bench =  5952543
+EXE = SF-McBrain-v40
+### bench nodes ->  Nodes searched  : 6940709
 
 ### Installation dir definitions
 PREFIX = /usr/local
@@ -37,13 +39,12 @@ BINDIR = $(PREFIX)/bin
 
 ### Built-in benchmark for pgo-builds
 PGOBENCH = ./$(EXE) bench
-###PGOBENCH2 = ./$(EXE) bench 16 2 10
+PGOBENCH2 = ./$(EXE) bench 16 2 10
 
 ### Object files
-OBJS = movegen.o search.o evaluate.o material.o position.o psqt.o \
-	pawns.o movepick.o thread.o bitbase.o bitboard.o endgame.o \
-	tbprobe.o timeman.o tt.o uci.o ucioption.o misc.o  \
-	main.o tzbook.o benchmark.o
+OBJS = benchmark.o bitbase.o bitboard.o endgame.o evaluate.o main.o \
+	material.o misc.o movegen.o movepick.o pawns.o position.o psqt.o \
+	search.o thread.o timeman.o tt.o uci.o ucioption.o polybook.o tbprobe.o
 
 ### ==========================================================================
 ### Section 2. High-level Configuration
@@ -53,7 +54,9 @@ OBJS = movegen.o search.o evaluate.o material.o position.o psqt.o \
 # ----------------------------------------------------------------------------
 #
 # debug = yes/no      --- -DNDEBUG         --- Enable/Disable debug mode
-# sanitize = yes/no   --- (-fsanitize )    --- enable undefined behavior checks
+# sanitize = undefined/thread/no (-fsanitize )
+#                     --- ( undefined )    --- enable undefined behavior checks
+#                     --- ( thread    )    --- enable threading error  checks
 # optimize = yes/no   --- (-O3/-fast etc.) --- Enable/Disable optimizations
 # arch = (name)       --- (-arch)          --- Target architecture
 # bits = 64/32        --- -DIS_64BIT       --- 64-/32-bit operating system
@@ -142,7 +145,7 @@ endif
 
 ### 3.1 Selecting compiler (default = gcc)
 
-CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -fno-rtti -std=c++11 $(EXTRACXXFLAGS)
+CXXFLAGS += -Wall -Wcast-qual -fno-exceptions -std=c++11 $(EXTRACXXFLAGS)
 DEPENDFLAGS += -std=c++11
 LDFLAGS += $(EXTRALDFLAGS)
 
@@ -153,7 +156,7 @@ endif
 ifeq ($(COMP),gcc)
 	comp=gcc
 	CXX=g++
-	CXXFLAGS += -pedantic -Wextra -Wshadow  -fprefetch-loop-arrays --param max-unroll-times=4 -ffast-math
+	CXXFLAGS += -pedantic -Wextra -Wshadow -static-libstdc++
 
 	ifeq ($(ARCH),armv7)
 		ifeq ($(OS),Android)
@@ -205,6 +208,11 @@ ifeq ($(COMP),clang)
 	comp=clang
 	CXX=clang++
 	CXXFLAGS += -pedantic -Wextra -Wshadow
+ifneq ($(KERNEL),Darwin)
+ifneq ($(KERNEL),OpenBSD)
+	LDFLAGS += -latomic
+endif
+endif
 
 	ifeq ($(ARCH),armv7)
 		ifeq ($(OS),Android)
@@ -231,8 +239,8 @@ endif
 endif
 
 ifeq ($(KERNEL),Darwin)
-	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.12
-	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.12
+	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.9
+	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.9
 endif
 
 ### Travis CI script uses COMPILER to overwrite CXX
@@ -264,15 +272,17 @@ else
 endif
 
 ### 3.2.2 Debugging with undefined behavior sanitizers
-ifeq ($(sanitize),yes)
-        CXXFLAGS += -g3 -fsanitize=undefined
-        LDFLAGS += -fsanitize=undefined
+ifneq ($(sanitize),no)
+        CXXFLAGS += -g3 -fsanitize=$(sanitize) -fuse-ld=gold
+        LDFLAGS += -fsanitize=$(sanitize) -fuse-ld=gold
 endif
 
 ### 3.3 Optimization
 ifeq ($(optimize),yes)
 
-	CXXFLAGS += -O3
+CXXFLAGS += -O1 -O3 -msse4.2 -mpopcnt -mtune=native 
+####-Os -O1  -mtune=native
+#### for those on macOS High Sierra 10.13 and higher use, "-Os -O1 -mtune=native" for PGO using gcc7
 
 	ifeq ($(comp),gcc)
 
@@ -292,7 +302,7 @@ ifeq ($(optimize),yes)
 
 	ifeq ($(comp),icc)
 		ifeq ($(KERNEL),Darwin)
-			CXXFLAGS += -mdynamic-no-pic -qopt-prefetch -unroll-aggressive
+			CXXFLAGS += -mdynamic-no-pic
 		endif
 	endif
 
@@ -318,13 +328,8 @@ endif
 ### 3.5 prefetch
 ifeq ($(prefetch),yes)
 	ifeq ($(sse),yes)
-		ifeq ($(comp),icc)
-		CXXFLAGS +=
-		DEPENDFLAGS +=
-	else
 		CXXFLAGS += -msse
 		DEPENDFLAGS += -msse
-		endif
 	endif
 else
 	CXXFLAGS += -DNO_PREFETCH
@@ -333,9 +338,9 @@ endif
 ### 3.6 popcnt
 ifeq ($(popcnt),yes)
 	ifeq ($(comp),icc)
-		CXXFLAGS += -xhost  -DUSE_POPCNT
+		CXXFLAGS += -msse3 -DUSE_POPCNT
 	else
-		CXXFLAGS += -msse4.2 -mpopcnt -DUSE_POPCNT
+		CXXFLAGS += -msse3 -mpopcnt -DUSE_POPCNT
 	endif
 endif
 
@@ -435,6 +440,7 @@ help:
 build: config-sanity
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) all
 	strip $(EXE)
+	cp $(EXE) /Users/michaelbyrne/cluster.mfb/$(EXE)
 
 profile-build: config-sanity objclean profileclean
 	@echo ""
@@ -444,13 +450,17 @@ profile-build: config-sanity objclean profileclean
 	@echo "Step 2/5. Running benchmark for pgo-build ..."
 	$(PGOBENCH) > /dev/null
 	@echo ""
-	@echo "Step 3/4. Building optimized executable ..."
+	@echo "Step 3/5. Running benchmark for pgo-build ..."
+	$(PGOBENCH2) > /dev/null
+	@echo ""
+	@echo "Step 4/5. Building optimized executable ..."
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) objclean
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) $(profile_use)
 	@echo ""
-	@echo "Step 4/4. Deleting profile data ..."
+	@echo "Step 5/5. Deleting profile data ..."
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) profileclean
 	strip $(EXE)
+	cp $(EXE) /Users/michaelbyrne/cluster.mfb/$(EXE)
 
 strip:
 	strip $(EXE)
@@ -462,16 +472,16 @@ install:
 
 #clean all
 clean: objclean profileclean
-	@rm -f .depend *~ core 
+	@rm -f .depend *~ core
 
 # clean binaries and objects
 objclean:
-	@rm -f $(EXE) $(EXE).exe *.o
+	@rm -f $(EXE) $(EXE).exe *.o ./syzygy/*.o
 
 # clean auxiliary profiling files
 profileclean:
 	@rm -rf profdir
-	@rm -f bench.txt *.gcda *.gcno
+	@rm -f bench.txt *.gcda ./syzygy/*.gcda *.gcno ./syzygy/*.gcno
 	@rm -f stockfish.profdata *.profraw
 
 default:
@@ -506,7 +516,7 @@ config-sanity:
 	@echo "Testing config sanity. If this fails, try 'make help' ..."
 	@echo ""
 	@test "$(debug)" = "yes" || test "$(debug)" = "no"
-	@test "$(sanitize)" = "yes" || test "$(sanitize)" = "no"
+	@test "$(sanitize)" = "undefined" || test "$(sanitize)" = "thread" || test "$(sanitize)" = "no"
 	@test "$(optimize)" = "yes" || test "$(optimize)" = "no"
 	@test "$(arch)" = "any" || test "$(arch)" = "x86_64" || test "$(arch)" = "i386" || \
 	 test "$(arch)" = "ppc64" || test "$(arch)" = "ppc" || test "$(arch)" = "armv7"
@@ -541,7 +551,7 @@ gcc-profile-make:
 
 gcc-profile-use:
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-use -fno-peel-loops -fno-tracer' \
+	EXTRACXXFLAGS='-fprofile-use -fprofile-correction  -fno-peel-loops -fno-tracer' \
 	EXTRALDFLAGS='-lgcov' \
 	all
 
@@ -553,7 +563,7 @@ icc-profile-make:
 
 icc-profile-use:
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-prof_use -ipo -prof_dir ./profdir' \
+	EXTRACXXFLAGS='-prof_use -prof_dir ./profdir' \
 	all
 
 .depend:

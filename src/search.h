@@ -53,7 +53,6 @@ struct Stack {
   Depth newDepth;
   uint8_t forcedMove;
   uint8_t forcingTree;
-	
 };
 
 
@@ -105,7 +104,8 @@ extern LimitsType Limits;
 
 void init();
 void clear();
-
+Value respect(const Position& pos, Color c);
+	
 } // namespace Search
 
 #endif // #ifndef SEARCH_H_INCLUDED

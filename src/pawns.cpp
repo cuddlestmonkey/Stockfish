@@ -53,14 +53,14 @@ namespace {
   // Weakness of our pawn shelter in front of the king by [isKingFile][distance from edge][rank].
   // RANK_1 = 0 is used for files where we have no pawns or our pawn is behind our king.
   const Value ShelterWeakness[][int(FILE_NB) / 2][RANK_NB] = {
-    { { V( 97), V(17), V( 9), V(44), V( 84), V( 87), V( 99) }, // Not On King file
-      { V(106), V( 6), V(33), V(86), V( 87), V(104), V(112) },
-      { V(101), V( 2), V(65), V(98), V( 58), V( 89), V(115) },
-      { V( 73), V( 7), V(54), V(73), V( 84), V( 83), V(111) } },
-    { { V(104), V(20), V( 6), V(27), V( 86), V( 93), V( 82) }, // On King file
-      { V(123), V( 9), V(34), V(96), V(112), V( 88), V( 75) },
-      { V(120), V(25), V(65), V(91), V( 66), V( 78), V(117) },
-      { V( 81), V( 2), V(47), V(63), V( 94), V( 93), V(104) } }
+	  { { V( 98), V(20), V(11), V(42), V( 83), V( 84), V(101) }, // Not On King file
+		{ V(103), V( 8), V(33), V(86), V( 87), V(105), V(113) },
+		{ V(100), V( 2), V(65), V(95), V( 59), V( 89), V(115) },
+		{ V( 72), V( 6), V(52), V(74), V( 83), V( 84), V(112) } },
+	  { { V(105), V(19), V( 3), V(27), V( 85), V( 93), V( 84) }, // On King file
+		{ V(121), V( 7), V(33), V(95), V(112), V( 86), V( 72) },
+		{ V(121), V(26), V(65), V(90), V( 65), V( 76), V(117) },
+		{ V( 79), V( 0), V(45), V(65), V( 94), V( 92), V(105) } }
   };
 
   // Danger of enemy pawns moving toward our king by [type][distance from edge][rank].
@@ -95,10 +95,10 @@ namespace {
   template<Color Us>
   Score evaluate(const Position& pos, Pawns::Entry* e) {
 
-    const Color  Them  = (Us == WHITE ? BLACK      : WHITE);
-    const Square Up    = (Us == WHITE ? NORTH      : SOUTH);
-    const Square Right = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
-    const Square Left  = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
+    const Color     Them  = (Us == WHITE ? BLACK      : WHITE);
+    const Direction Up    = (Us == WHITE ? NORTH      : SOUTH);
+    const Direction Right = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
+    const Direction Left  = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
 
     Bitboard b, neighbours, stoppers, doubled, supported, phalanx;
     Bitboard lever, leverPush;
@@ -175,7 +175,7 @@ namespace {
 
         // Score this pawn
         if (supported | phalanx)
-            score += Connected[opposed][!!phalanx][popcount(supported)][relative_rank(Us, s)];
+            score += Connected[opposed][bool(phalanx)][popcount(supported)][relative_rank(Us, s)];
 
         else if (!neighbours)
             score -= Isolated, e->weakUnopposed[Us] += !opposed;
@@ -255,7 +255,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
   Value safety = MaxSafetyBonus;
   File center = std::max(FILE_B, std::min(FILE_G, file_of(ksq)));
 
-  for (File f = center - File(1); f <= center + File(1); ++f)
+  for (File f = File(center - 1); f <= File(center + 1); ++f)
   {
       b = ourPawns & file_bb(f);
       Rank rkUs = b ? relative_rank(Us, backmost_sq(Us, b)) : RANK_1;
@@ -263,7 +263,7 @@ Value Entry::shelter_storm(const Position& pos, Square ksq) {
       b = theirPawns & file_bb(f);
       Rank rkThem = b ? relative_rank(Us, frontmost_sq(Them, b)) : RANK_1;
 
-      int d = std::min(f, FILE_H - f);
+      int d = std::min(f, ~f);
       safety -=  ShelterWeakness[f == file_of(ksq)][d][rkUs]
                + StormDanger
                  [f == file_of(ksq) && rkThem == relative_rank(Us, ksq) + 1 ? BlockedByKing  :

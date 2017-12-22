@@ -40,7 +40,7 @@ namespace {
     double ratio; // Which ratio of myTime we are going to use
 
     // Usage of increment follows quadratic distribution with the maximum at move 25
-    double inc = myInc * std::max(55.0, 120 - 0.12 * (moveNum - 30) * (moveNum - 30));
+    double inc = myInc * std::max(55.0, 120 - 0.12 * (moveNum - 25) * (moveNum - 25));
 
     // In moves-to-go we distribute time according to a quadratic function with
     // the maximum around move 20 for 40 moves in y time case.
@@ -48,12 +48,14 @@ namespace {
     {
         ratio = (type == OptimumTime ? 1.0 : 6.0) / std::min(50, movesToGo);
 
-        if (moveNum <= 50)
-            ratio *= 1.1 - 0.001 * (moveNum - 25) * (moveNum - 25);
+        if (moveNum <= 40)
+            ratio *= 1.1 - 0.001 * (moveNum - 20) * (moveNum - 20);
         else
             ratio *= 1.5;
-		
-		if (movesToGo > 1) ratio = std::min(0.75, ratio);
+
+        if (movesToGo > 1)
+            ratio = std::min(0.75, ratio);
+
         ratio *= 1 + inc / (myTime * 8.5);
     }
     // Otherwise we increase usage of remaining time as the game goes on
