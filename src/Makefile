@@ -31,7 +31,7 @@ endif
 
 ### Executable name
 EXE = SF-McBrain-v40
-### bench nodes ->  Nodes searched  : 6940709
+### bench nodes ->  Nodes searched  : 6376731
 
 ### Installation dir definitions
 PREFIX = /usr/local
