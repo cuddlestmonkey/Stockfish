@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2017 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2018 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -123,7 +123,7 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 
 /// score() assigns a numerical value to each move in a list, used for sorting.
 /// Captures are ordered by Most Valuable Victim (MVV), preferring captures
-/// near our home rank. Quiets are ordered using the histories.
+/// with a good history. Quiets are ordered using the histories.
 template<GenType Type>
 void MovePicker::score() {
 
@@ -179,12 +179,7 @@ Move MovePicker::next_move(bool skipQuiets) {
           move = pick_best(cur++, endMoves);
           if (move != ttMove)
           {
-              if (pos.see_ge(move))
-                  return move;
-
-              if (   type_of(pos.piece_on(to_sq(move))) == KNIGHT
-                  && type_of(pos.moved_piece(move)) == BISHOP
-                  && (cur-1)->value > 1090)
+              if (pos.see_ge(move, Value(-55 * (cur-1)->value / 1024)))
                   return move;
 
               // Losing capture, move it to the beginning of the array
