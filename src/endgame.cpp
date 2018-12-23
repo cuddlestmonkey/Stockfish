@@ -2,7 +2,7 @@
   Stockfish, a UCI chess playing engine derived from Glaurung 2.1
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
-  Copyright (C) 2015-2018 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
+  Copyright (C) 2015-2019 Marco Costalba, Joona Kiiski, Gary Linscott, Tord Romstad
 
   Stockfish is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -86,30 +86,6 @@ namespace {
 } // namespace
 
 
-/// Endgames members definitions
-
-Endgames::Endgames() {
-
-  add<KPK>("KPK");
-  add<KNNK>("KNNK");
-  add<KBNK>("KBNK");
-  add<KRKP>("KRKP");
-  add<KRKB>("KRKB");
-  add<KRKN>("KRKN");
-  add<KQKP>("KQKP");
-  add<KQKR>("KQKR");
-
-  add<KNPK>("KNPK");
-  add<KNPKB>("KNPKB");
-  add<KRPKR>("KRPKR");
-  add<KRPKB>("KRPKB");
-  add<KBPKB>("KBPKB");
-  add<KBPKN>("KBPKN");
-  add<KBPPKB>("KBPPKB");
-  add<KRPPKRP>("KRPPKRP");
-}
-
-
 /// Mate with KX vs K. This function is used to evaluate positions with
 /// king and plenty of material vs a lone king. It simply gives the
 /// attacking side a bonus for driving the defending king towards the edge
@@ -144,7 +120,7 @@ Value Endgame<KXK>::operator()(const Position& pos) const {
 
 
 /// Mate with KBN vs K. This is similar to KX vs K, but we have to drive the
-/// defending king towards a corner square of the right color.
+/// defending king towards a corner square that our bishop attacks.
 template<>
 Value Endgame<KBNK>::operator()(const Position& pos) const {
 
@@ -155,18 +131,12 @@ Value Endgame<KBNK>::operator()(const Position& pos) const {
   Square loserKSq = pos.square<KING>(weakSide);
   Square bishopSq = pos.square<BISHOP>(strongSide);
 
-  // kbnk_mate_table() tries to drive toward corners A1 or H8. If we have a
-  // bishop that cannot reach the above squares, we flip the kings in order
-  // to drive the enemy toward corners A8 or H1.
-  if (opposite_colors(bishopSq, SQ_A1))
-  {
-      winnerKSq = ~winnerKSq;
-      loserKSq  = ~loserKSq;
-  }
+  // If our Bishop does not attack A1/H8, we flip the enemy king square 
+  // to drive to opposite corners (A8/H1).
 
   Value result =  VALUE_KNOWN_WIN
                 + PushClose[distance(winnerKSq, loserKSq)]
-                + PushToCorners[loserKSq];
+                + PushToCorners[opposite_colors(bishopSq, SQ_A1) ? ~loserKSq : loserKSq];
 
   return strongSide == pos.side_to_move() ? result : -result;
 }
@@ -214,7 +184,7 @@ Value Endgame<KRKP>::operator()(const Position& pos) const {
   Value result;
 
   // If the stronger side's king is in front of the pawn, it's a win
-  if (wksq < psq && file_of(wksq) == file_of(psq))
+  if (forward_file_bb(WHITE, wksq) & psq)
       result = RookValueEg - distance(wksq, psq);
 
   // If the weaker side's king is too far from the pawn and the rook,
@@ -240,7 +210,7 @@ Value Endgame<KRKP>::operator()(const Position& pos) const {
 }
 
 
-/// KR vs KB. This is very simple, and always returns drawish scores.  The
+/// KR vs KB. This is very simple, and always returns drawish scores. The
 /// score is slightly bigger when the defending king is close to the edge.
 template<>
 Value Endgame<KRKB>::operator()(const Position& pos) const {
